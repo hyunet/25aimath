@@ -1,3 +1,4 @@
 sympy
 plotly
 matplotlib
+koreanize-matplotlib
