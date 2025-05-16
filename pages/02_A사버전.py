@@ -4,7 +4,7 @@ import numpy as np
 import plotly.graph_objects as go
 from scipy.optimize import minimize
 import time
-
+# gemini
 st.set_page_config(layout="wide", page_title="경사 하강법 체험", page_icon="🎢")
 
 # --- 0. 교육적 콘텐츠 및 정적 옵션 정의 ---
@@ -32,7 +32,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 st.title("🎢 딥러닝 경사 하강법 체험 (교육용)")
-st.caption("제작: 서울고 송석리 선생님 | 교육적 개선: Gemini AI & 구글")
+st.caption("제작: 서울고 송석리 선생님")
 
 st.info("""
 **🎯 이 앱의 목표:**
