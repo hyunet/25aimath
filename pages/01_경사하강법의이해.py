@@ -45,9 +45,14 @@ if "gd_path" not in st.session_state or st.session_state.get("last_func", "") !=
     st.session_state.play = False
     st.session_state.last_func = func_input
 
-# 카메라 조작 이벤트 감지용(유저가 손으로 돌렸을 때 갱신)
-def update_camera_eye(camera_eye):
-    st.session_state.camera_eye = camera_eye
+def save_camera(figure):
+    # 사용자가 plotly에서 그래프를 조작할 때 현재 시점을 저장
+    try:
+        cam = figure.layout.scene.camera
+        if cam is not None:
+            st.session_state.camera_eye = cam.eye
+    except Exception:
+        pass
 
 col1, col2, col3 = st.columns([1,1,2])
 with col1:
@@ -76,7 +81,7 @@ try:
         st.session_state.gd_path = [(float(start_x), float(start_y))]
         st.session_state.gd_step = 0
         st.session_state.play = False
-        st.session_state.camera_eye = dict(x=1.7, y=1.7, z=1.2) # 초기화시도
+        st.session_state.camera_eye = dict(x=1.7, y=1.7, z=1.2)
 
     # 한 스텝 이동
     if step_btn and st.session_state.gd_step < steps:
@@ -93,7 +98,6 @@ try:
     if play_btn:
         st.session_state.play = True
 
-    # 시각화 함수
     def plot_gd(f_np, dx_np, dy_np, x_min, x_max, y_min, y_max, gd_path, min_point, camera_eye):
         X = np.linspace(x_min, x_max, 80)
         Y = np.linspace(y_min, y_max, 80)
@@ -174,20 +178,21 @@ try:
             next_y = curr_y - learning_rate * grad_y
             st.session_state.gd_path.append((next_x, next_y))
             st.session_state.gd_step += 1
-            fig = plot_gd(f_np, dx_np, dy_np, x_min, x_max, y_min, y_max, st.session_state.gd_path, (min_x, min_y, min_z), st.session_state.camera_eye)
-            fig_placeholder.plotly_chart(fig, use_container_width=True)
+            fig = plot_gd(
+                f_np, dx_np, dy_np, x_min, x_max, y_min, y_max,
+                st.session_state.gd_path, (min_x, min_y, min_z), st.session_state.camera_eye)
+            fig_placeholder.plotly_chart(fig, use_container_width=True, key="ani_plot")
+            save_camera(fig)
             time.sleep(0.15)
         st.session_state.play = False
 
     # Step/일반 출력
-    fig = plot_gd(f_np, dx_np, dy_np, x_min, x_max, y_min, y_max,
-                  st.session_state.gd_path, (min_x, min_y, min_z), st.session_state.camera_eye)
-    camera_update = st.plotly_chart(fig, use_container_width=True)
+    fig = plot_gd(
+        f_np, dx_np, dy_np, x_min, x_max, y_min, y_max,
+        st.session_state.gd_path, (min_x, min_y, min_z), st.session_state.camera_eye)
+    st.plotly_chart(fig, use_container_width=True, key="main_plot")
+    save_camera(fig)
 
-    # 시점 제어 안내 (Plotly chart 조작 가능함)
-    st.caption("그래프를 직접 회전/확대/축소할 수 있습니다. 원하는 시점에서 Step/Play를 눌러도 시점이 그대로 유지됩니다.")
-
-    # 교육적 해설
     last_x, last_y = st.session_state.gd_path[-1]
     last_z = f_np(last_x, last_y)
     grad_x = dx_np(last_x, last_y)
@@ -197,13 +202,8 @@ try:
         **현재 위치:** ({last_x:.3f}, {last_y:.3f})  
         **현재 함수값:** {last_z:.3f}  
         **현재 기울기:** (∂f/∂x = {grad_x:.3f}, ∂f/∂y = {grad_y:.3f})  
-        **최적점:** ({min_x:.3f}, {min_y:.3f}), 함수값: {min_z:.3f}  
         """
     )
-    if abs(last_x - min_x) > 0.05 or abs(last_y - min_y) > 0.05:
-        st.info("아직 최적점에 도달하지 못했습니다. 학습률, 초기값, 반복횟수를 조절해 실험해보세요!")
-    else:
-        st.success("최적점에 거의 도달했습니다! 🎉")
 except Exception as e:
     st.error(f"수식 오류 또는 지원 불가: {e}")
 
