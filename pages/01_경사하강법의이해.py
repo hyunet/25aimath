@@ -3,14 +3,9 @@ from sympy import symbols, diff, sympify, lambdify
 import numpy as np
 import plotly.graph_objects as go
 
-st.title("🧠 딥러닝의 핵심: 경사하강법(Gradient Descent) 시각화")
+st.title("딥러닝 경사하강법 애니메이션 체험")
 
-st.markdown("""
-**경사하강법**은 인공지능이 "오차"를 줄여가며 정답을 찾아가는 수학적 방법입니다.  
-함수를 직접 입력하고, 시작점과 학습률을 바꿔가며 최적점을 찾아가는 과정을 시각적으로 체험해보세요!
-""")
-
-# 함수 입력 및 범위, 시작 위치, 학습률, 반복 횟수 조절
+# 함수 입력 및 범위/학습률/초기값
 func_input = st.text_input("함수 f(x, y)를 입력하세요 (예: x**2 + y**2)", value="x**2 + y**2")
 x_min, x_max = st.slider("x 범위", -10, 10, (-5, 5))
 y_min, y_max = st.slider("y 범위", -10, 10, (-5, 5))
@@ -18,12 +13,28 @@ y_min, y_max = st.slider("y 범위", -10, 10, (-5, 5))
 start_x = st.slider("시작 x 위치", x_min, x_max, 4)
 start_y = st.slider("시작 y 위치", y_min, y_max, 4)
 learning_rate = st.number_input("학습률(learning rate)", min_value=0.001, max_value=1.0, value=0.2, step=0.01, format="%.3f")
-steps = st.slider("경사하강법 반복 횟수", 1, 50, 15)
+steps = st.slider("최대 반복 횟수", 1, 50, 15)
 
 x, y = symbols('x y')
 
+# ---- 상태 저장: 경로, 현재 스텝, 재생중 여부 ----
+if "gd_path" not in st.session_state or st.session_state.get("last_func", "") != func_input:
+    st.session_state.gd_path = [(float(start_x), float(start_y))]
+    st.session_state.gd_step = 0
+    st.session_state.play = False
+    st.session_state.last_func = func_input
+
+# ---- 버튼 컨트롤 ----
+col1, col2, col3 = st.columns([1,1,2])
+with col1:
+    step_btn = st.button("한 스텝 이동")
+with col2:
+    play_btn = st.button("▶ 전체 실행 (애니메이션)", key="playbtn")
+with col3:
+    reset_btn = st.button("🔄 초기화", key="resetbtn")
+
+# ---- 수식 및 미분 ----
 try:
-    # 수식 변환 및 미분
     f = sympify(func_input)
     f_np = lambdify((x, y), f, modules='numpy')
     dx_f = diff(f, x)
@@ -31,82 +42,156 @@ try:
     dx_np = lambdify((x, y), dx_f, modules='numpy')
     dy_np = lambdify((x, y), dy_f, modules='numpy')
 
-    # 곡면
-    X = np.linspace(x_min, x_max, 80)
-    Y = np.linspace(y_min, y_max, 80)
-    Xs, Ys = np.meshgrid(X, Y)
-    Zs = f_np(Xs, Ys)
+    # 실제 최소점 찾기 (이차함수라면 해석적, 일반적으론 수치해석)
+    # 2차 함수 기준: (0,0) 혹은 미분=0인 지점
+    from scipy.optimize import minimize
 
-    # 경사하강법 경로 계산
-    path_x = [start_x]
-    path_y = [start_y]
-    path_z = [f_np(start_x, start_y)]
-    curr_x, curr_y = start_x, start_y
+    def min_func(vars):
+        return f_np(vars[0], vars[1])
 
-    for i in range(steps):
+    res = minimize(min_func, [start_x, start_y])
+    min_x, min_y = res.x
+    min_z = f_np(min_x, min_y)
+
+    # ---- 경사하강법 경로 ----
+    if reset_btn:
+        st.session_state.gd_path = [(float(start_x), float(start_y))]
+        st.session_state.gd_step = 0
+        st.session_state.play = False
+
+    # 스텝 단추
+    if step_btn and st.session_state.gd_step < steps:
+        curr_x, curr_y = st.session_state.gd_path[-1]
         grad_x = dx_np(curr_x, curr_y)
         grad_y = dy_np(curr_x, curr_y)
-        # 경사하강법 업데이트
         next_x = curr_x - learning_rate * grad_x
         next_y = curr_y - learning_rate * grad_y
-        next_z = f_np(next_x, next_y)
-        path_x.append(next_x)
-        path_y.append(next_y)
-        path_z.append(next_z)
-        curr_x, curr_y = next_x, next_y
+        st.session_state.gd_path.append((next_x, next_y))
+        st.session_state.gd_step += 1
 
-    fig = go.Figure()
+    # 전체 실행 애니메이션
+    import time
+    if play_btn:
+        st.session_state.play = True
 
-    # 곡면
-    fig.add_trace(go.Surface(x=X, y=Y, z=Zs, opacity=0.6, colorscale='Viridis', showscale=False, name="곡면"))
+    if st.session_state.play and st.session_state.gd_step < steps:
+        for _ in range(st.session_state.gd_step, steps):
+            curr_x, curr_y = st.session_state.gd_path[-1]
+            grad_x = dx_np(curr_x, curr_y)
+            grad_y = dy_np(curr_x, curr_y)
+            next_x = curr_x - learning_rate * grad_x
+            next_y = curr_y - learning_rate * grad_y
+            st.session_state.gd_path.append((next_x, next_y))
+            st.session_state.gd_step += 1
+            # 실감나게 보여주기 위해
+            fig_placeholder = st.empty()
+            # 아래 시각화 함수 이용해서 중간 결과 표시
+            fig_placeholder.plotly_chart(
+                lambda: plot_gd(
+                    f_np, dx_np, dy_np, x_min, x_max, y_min, y_max,
+                    st.session_state.gd_path, (min_x, min_y, min_z)
+                ),
+                use_container_width=True
+            )
+            time.sleep(0.15)
+        st.session_state.play = False
 
-    # 경로
-    fig.add_trace(go.Scatter3d(
-        x=path_x, y=path_y, z=path_z,
-        mode='lines+markers',
-        marker=dict(size=6, color='red'),
-        line=dict(color='red', width=4),
-        name="경사하강법 경로"
-    ))
+    # ---- 시각화 ----
+    def plot_gd(f_np, dx_np, dy_np, x_min, x_max, y_min, y_max, gd_path, min_point):
+        X = np.linspace(x_min, x_max, 80)
+        Y = np.linspace(y_min, y_max, 80)
+        Xs, Ys = np.meshgrid(X, Y)
+        Zs = f_np(Xs, Ys)
 
-    # 화살표로 기울기 방향 (각 단계별, 가장 최근 5개만)
-    for i in range(1, min(6, len(path_x))):
-        fig.add_trace(go.Cone(
-            x=[path_x[-i]],
-            y=[path_y[-i]],
-            z=[path_z[-i]],
-            u=[-dx_np(path_x[-i], path_y[-i])*0.4],
-            v=[-dy_np(path_x[-i], path_y[-i])*0.4],
-            w=[0],
-            sizemode="absolute",
-            sizeref=0.5,
-            colorscale="Reds",
-            showscale=False,
-            anchor="tail",
-            name="Gradient"
+        fig = go.Figure()
+        fig.add_trace(go.Surface(x=X, y=Y, z=Zs, opacity=0.6, colorscale='Viridis', showscale=False))
+
+        # 경사하강법 경로
+        px, py = zip(*gd_path)
+        pz = [f_np(x, y) for x, y in gd_path]
+        fig.add_trace(go.Scatter3d(
+            x=px, y=py, z=pz,
+            mode='lines+markers+text',
+            marker=dict(size=6, color='red'),
+            line=dict(color='red', width=4),
+            name="경로",
+            text=[f"({x:.2f}, {y:.2f})" for x, y in gd_path],
+            textposition="top center"
         ))
 
-    fig.update_layout(
-        scene=dict(
-            xaxis_title='x',
-            yaxis_title='y',
-            zaxis_title='f(x, y)'
-        ),
-        width=850, height=650,
-        margin=dict(l=10, r=10, t=30, b=10),
-        title="경사하강법(Gradient Descent) 이동 경로"
-    )
-    st.plotly_chart(fig, use_container_width=True)
+        # 각 지점의 기울기(gradient) 벡터 표시 (마지막 10개)
+        arrow_scale = 0.45
+        for i in range(-1, -min(11, len(gd_path)), -1):
+            gx, gy = gd_path[i]
+            gz = f_np(gx, gy)
+            grad_x = dx_np(gx, gy)
+            grad_y = dy_np(gx, gy)
+            fig.add_trace(go.Cone(
+                x=[gx], y=[gy], z=[gz],
+                u=[-grad_x * arrow_scale],
+                v=[-grad_y * arrow_scale],
+                w=[0],
+                sizemode="absolute", sizeref=0.6,
+                colorscale="Blues", showscale=False,
+                anchor="tail", name="기울기"
+            ))
 
-    st.info(
+        # 실제 최소점 (녹색)
+        min_x, min_y, min_z = min_point
+        fig.add_trace(go.Scatter3d(
+            x=[min_x], y=[min_y], z=[min_z],
+            mode='markers+text',
+            marker=dict(size=10, color='limegreen', symbol='diamond'),
+            text=["최적점"],
+            textposition="bottom center",
+            name="최적점"
+        ))
+
+        # 경사하강법 마지막 점 (파란색)
+        last_x, last_y = gd_path[-1]
+        last_z = f_np(last_x, last_y)
+        fig.add_trace(go.Scatter3d(
+            x=[last_x], y=[last_y], z=[last_z],
+            mode='markers+text',
+            marker=dict(size=10, color='blue'),
+            text=["경사하강법 결과"],
+            textposition="top right",
+            name="최종점"
+        ))
+
+        fig.update_layout(
+            scene=dict(
+                xaxis_title='x', yaxis_title='y', zaxis_title='f(x, y)'
+            ),
+            width=800, height=600, margin=dict(l=10, r=10, t=30, b=10),
+            title="경사하강법 경로 vs 최적점"
+        )
+        return fig
+
+    # 한 스텝씩/모두 실행 아닐 때, 현재 상태 표시
+    st.plotly_chart(
+        plot_gd(f_np, dx_np, dy_np, x_min, x_max, y_min, y_max,
+                st.session_state.gd_path, (min_x, min_y, min_z)),
+        use_container_width=True
+    )
+
+    # 교육적 해설
+    last_x, last_y = st.session_state.gd_path[-1]
+    last_z = f_np(last_x, last_y)
+    grad_x = dx_np(last_x, last_y)
+    grad_y = dy_np(last_x, last_y)
+    st.success(
         f"""
-        **설명:**  
-        - 빨간 경로가 인공지능이 오차를 줄이며 최적점(최솟값)으로 이동하는 과정입니다.  
-        - **학습률**을 너무 크게 하면 튕기고, 너무 작으면 천천히 접근합니다.  
-        - 실제 딥러닝에서 이 원리가 반복적으로 쓰입니다!
+        **현재 위치:** ({last_x:.3f}, {last_y:.3f})  
+        **현재 함수값:** {last_z:.3f}  
+        **현재 기울기:** (∂f/∂x = {grad_x:.3f}, ∂f/∂y = {grad_y:.3f})  
+        **최적점:** ({min_x:.3f}, {min_y:.3f}), 함수값: {min_z:.3f}  
         """
     )
-
+    if abs(last_x - min_x) > 0.05 or abs(last_y - min_y) > 0.05:
+        st.info("아직 최적점에 도달하지 못했습니다. 학습률, 초기값, 반복횟수를 조절해 실험해보세요!")
+    else:
+        st.success("최적점에 거의 도달했습니다! 🎉")
 except Exception as e:
     st.error(f"수식 오류 또는 지원 불가: {e}")
 
