@@ -3,9 +3,8 @@ from sympy import symbols, diff, sympify, lambdify
 import numpy as np
 import plotly.graph_objects as go
 
-st.title("딥러닝 경사하강법 체험 - 다양한 함수와 시점 유지")
+st.title("딥러닝 경사하강법 체험 - 다양한 함수와 시점 저장")
 
-# 함수 선택
 default_funcs = {
     "볼록 함수 (최적화 쉬움, 예: x²+y²)": "x**2 + y**2",
     "안장점 함수 (최적화 어려움, 예: x²-y²)": "x**2 - y**2",
@@ -19,7 +18,6 @@ func_radio = st.radio(
     index=0
 )
 
-# 사용자 입력 및 실제 적용될 수식
 if func_radio == "사용자 정의 함수 입력":
     func_input = st.text_input("함수 f(x, y)를 입력하세요 (예: x**2 + y**2)", value="x**2 + y**2")
 else:
@@ -36,31 +34,92 @@ steps = st.slider("최대 반복 횟수", 1, 50, 15)
 
 x, y = symbols('x y')
 
-# --- 상태: 경로, 카메라 시점, 현재 step 등 ---
+# --- 상태 ---
 if "gd_path" not in st.session_state or st.session_state.get("last_func", "") != func_input:
     st.session_state.gd_path = [(float(start_x), float(start_y))]
     st.session_state.gd_step = 0
-    # 카메라 초기 위치 (그래프 전체가 보이도록)
-    st.session_state.camera_eye = dict(x=1.7, y=1.7, z=1.2)
+    st.session_state.camera_eye = dict(x=1.7, y=1.7, z=1.2)  # 전체가 보이는 각도
     st.session_state.play = False
     st.session_state.last_func = func_input
 
-def save_camera(figure):
-    # 사용자가 plotly에서 그래프를 조작할 때 현재 시점을 저장
-    try:
-        cam = figure.layout.scene.camera
-        if cam is not None:
-            st.session_state.camera_eye = cam.eye
-    except Exception:
-        pass
+def plot_gd(f_np, dx_np, dy_np, x_min, x_max, y_min, y_max, gd_path, min_point, camera_eye):
+    X = np.linspace(x_min, x_max, 80)
+    Y = np.linspace(y_min, y_max, 80)
+    Xs, Ys = np.meshgrid(X, Y)
+    Zs = f_np(Xs, Ys)
 
-col1, col2, col3 = st.columns([1,1,2])
+    fig = go.Figure()
+    fig.add_trace(go.Surface(x=X, y=Y, z=Zs, opacity=0.6, colorscale='Viridis', showscale=False))
+
+    px, py = zip(*gd_path)
+    pz = [f_np(x, y) for x, y in gd_path]
+    fig.add_trace(go.Scatter3d(
+        x=px, y=py, z=pz,
+        mode='lines+markers+text',
+        marker=dict(size=6, color='red'),
+        line=dict(color='red', width=4),
+        name="경로",
+        text=[f"({x:.2f}, {y:.2f})" for x, y in gd_path],
+        textposition="top center"
+    ))
+
+    arrow_scale = 0.45
+    for i in range(-1, -min(11, len(gd_path)), -1):
+        gx, gy = gd_path[i]
+        gz = f_np(gx, gy)
+        grad_x = dx_np(gx, gy)
+        grad_y = dy_np(gx, gy)
+        fig.add_trace(go.Cone(
+            x=[gx], y=[gy], z=[gz],
+            u=[-grad_x * arrow_scale],
+            v=[-grad_y * arrow_scale],
+            w=[0],
+            sizemode="absolute", sizeref=0.6,
+            colorscale="Blues", showscale=False,
+            anchor="tail", name="기울기"
+        ))
+
+    min_x, min_y, min_z = min_point
+    fig.add_trace(go.Scatter3d(
+        x=[min_x], y=[min_y], z=[min_z],
+        mode='markers+text',
+        marker=dict(size=10, color='limegreen', symbol='diamond'),
+        text=["최적점"],
+        textposition="bottom center",
+        name="최적점"
+    ))
+
+    last_x, last_y = gd_path[-1]
+    last_z = f_np(last_x, last_y)
+    fig.add_trace(go.Scatter3d(
+        x=[last_x], y=[last_y], z=[last_z],
+        mode='markers+text',
+        marker=dict(size=10, color='blue'),
+        text=["경사하강법 결과"],
+        textposition="top right",
+        name="최종점"
+    ))
+
+    # 카메라 eye 유지
+    fig.update_layout(
+        scene=dict(
+            xaxis_title='x', yaxis_title='y', zaxis_title='f(x, y)',
+            camera=dict(eye=camera_eye)
+        ),
+        width=800, height=600, margin=dict(l=10, r=10, t=30, b=10),
+        title="경사하강법 경로 vs 최적점"
+    )
+    return fig
+
+col1, col2, col3, col4 = st.columns([1,1,2,2])
 with col1:
     step_btn = st.button("한 스텝 이동")
 with col2:
     play_btn = st.button("▶ 전체 실행 (애니메이션)", key="playbtn")
 with col3:
     reset_btn = st.button("🔄 초기화", key="resetbtn")
+with col4:
+    save_cam_btn = st.button("🖼️ 현재 시점 저장(유지)", key="savecam")
 
 try:
     f = sympify(func_input)
@@ -93,84 +152,14 @@ try:
         st.session_state.gd_path.append((next_x, next_y))
         st.session_state.gd_step += 1
 
-    # 전체 실행 애니메이션
+    # 전체 실행 애니메이션 (animation_chart key만 사용!)
     import time
     if play_btn:
         st.session_state.play = True
 
-    def plot_gd(f_np, dx_np, dy_np, x_min, x_max, y_min, y_max, gd_path, min_point, camera_eye):
-        X = np.linspace(x_min, x_max, 80)
-        Y = np.linspace(y_min, y_max, 80)
-        Xs, Ys = np.meshgrid(X, Y)
-        Zs = f_np(Xs, Ys)
-
-        fig = go.Figure()
-        fig.add_trace(go.Surface(x=X, y=Y, z=Zs, opacity=0.6, colorscale='Viridis', showscale=False))
-
-        px, py = zip(*gd_path)
-        pz = [f_np(x, y) for x, y in gd_path]
-        fig.add_trace(go.Scatter3d(
-            x=px, y=py, z=pz,
-            mode='lines+markers+text',
-            marker=dict(size=6, color='red'),
-            line=dict(color='red', width=4),
-            name="경로",
-            text=[f"({x:.2f}, {y:.2f})" for x, y in gd_path],
-            textposition="top center"
-        ))
-
-        arrow_scale = 0.45
-        for i in range(-1, -min(11, len(gd_path)), -1):
-            gx, gy = gd_path[i]
-            gz = f_np(gx, gy)
-            grad_x = dx_np(gx, gy)
-            grad_y = dy_np(gx, gy)
-            fig.add_trace(go.Cone(
-                x=[gx], y=[gy], z=[gz],
-                u=[-grad_x * arrow_scale],
-                v=[-grad_y * arrow_scale],
-                w=[0],
-                sizemode="absolute", sizeref=0.6,
-                colorscale="Blues", showscale=False,
-                anchor="tail", name="기울기"
-            ))
-
-        min_x, min_y, min_z = min_point
-        fig.add_trace(go.Scatter3d(
-            x=[min_x], y=[min_y], z=[min_z],
-            mode='markers+text',
-            marker=dict(size=10, color='limegreen', symbol='diamond'),
-            text=["최적점"],
-            textposition="bottom center",
-            name="최적점"
-        ))
-
-        last_x, last_y = gd_path[-1]
-        last_z = f_np(last_x, last_y)
-        fig.add_trace(go.Scatter3d(
-            x=[last_x], y=[last_y], z=[last_z],
-            mode='markers+text',
-            marker=dict(size=10, color='blue'),
-            text=["경사하강법 결과"],
-            textposition="top right",
-            name="최종점"
-        ))
-
-        # 카메라 eye 그대로(유지)
-        fig.update_layout(
-            scene=dict(
-                xaxis_title='x', yaxis_title='y', zaxis_title='f(x, y)',
-                camera=dict(eye=camera_eye)
-            ),
-            width=800, height=600, margin=dict(l=10, r=10, t=30, b=10),
-            title="경사하강법 경로 vs 최적점"
-        )
-        return fig
-
-    # 애니메이션 루프 (카메라 시점 유지)
     if st.session_state.play and st.session_state.gd_step < steps:
         fig_placeholder = st.empty()
-        for _ in range(st.session_state.gd_step, steps):
+        for i in range(st.session_state.gd_step, steps):
             curr_x, curr_y = st.session_state.gd_path[-1]
             grad_x = dx_np(curr_x, curr_y)
             grad_y = dy_np(curr_x, curr_y)
@@ -181,17 +170,23 @@ try:
             fig = plot_gd(
                 f_np, dx_np, dy_np, x_min, x_max, y_min, y_max,
                 st.session_state.gd_path, (min_x, min_y, min_z), st.session_state.camera_eye)
-            fig_placeholder.plotly_chart(fig, use_container_width=True, key="ani_plot")
-            save_camera(fig)
-            time.sleep(0.15)
+            fig_placeholder.plotly_chart(fig, use_container_width=True, key="animation_chart")
+            time.sleep(0.14)
         st.session_state.play = False
 
-    # Step/일반 출력
+    # Step/일반 출력 (main_chart key만 사용!)
     fig = plot_gd(
         f_np, dx_np, dy_np, x_min, x_max, y_min, y_max,
         st.session_state.gd_path, (min_x, min_y, min_z), st.session_state.camera_eye)
-    st.plotly_chart(fig, use_container_width=True, key="main_plot")
-    save_camera(fig)
+    st.plotly_chart(fig, use_container_width=True, key="main_chart")
+
+    # 시점 저장 버튼: 현재 시각화의 카메라 값을 반영
+    if save_cam_btn:
+        # 사용자가 시점 저장 버튼을 누르면 현재 figure의 카메라 각도를 session_state에 저장
+        cam = fig.layout.scene.camera
+        if cam is not None and hasattr(cam, "eye"):
+            st.session_state.camera_eye = dict(x=cam.eye.x, y=cam.eye.y, z=cam.eye.z)
+            st.success("현재 그래프 시점을 저장했습니다! 이후 Step/Play/Reset에도 계속 유지됩니다.")
 
     last_x, last_y = st.session_state.gd_path[-1]
     last_z = f_np(last_x, last_y)
