@@ -646,10 +646,6 @@ def create_sidebar():
 
 def create_main_interface():
     """메인 인터페이스 구성"""
-    # 현재 애니메이션 상태 표시
-    if st.session_state.get("play", False):
-        st.info("🎥 애니메이션 실행 중...")
-    
     # 구분선
     st.markdown("---")
     
@@ -853,80 +849,55 @@ def main():
         
         st.rerun()
     
-    # 전체 실행 버튼
+    # 전체 실행 버튼 - 애니메이션 대신 모든 계산을 즉시 수행
     if play_btn:
-        if not st.session_state.get("play", False):
-            st.session_state.play = True
-            st.session_state.animation_camera_eye = CAMERA_ANGLES[st.session_state.selected_camera_option_name]
-            st.session_state.messages = []
-            st.rerun()
-    
-    # 애니메이션 실행 중
-    if st.session_state.get("play", False) and st.session_state.gd_step < st.session_state.steps_slider:
-        current_animation_cam = st.session_state.get("animation_camera_eye", CAMERA_ANGLES[st.session_state.selected_camera_option_name])
+        # 메시지 초기화
+        st.session_state.messages = []
         
-        # 경사 하강법 한 스텝 실행
-        next_point, step_result = gradient_descent_step(
-            f_np_func, 
-            dx_np_func, 
-            dy_np_func, 
-            st.session_state.gd_path[-1], 
-            st.session_state.learning_rate_input
-        )
+        # 경로 초기화 - 시작점만 포함
+        st.session_state.gd_path = [(float(st.session_state.start_x_slider), float(st.session_state.start_y_slider))]
+        st.session_state.gd_step = 0
+        st.session_state.educational_logs = []
         
-        if isinstance(step_result, dict):  # 성공적인 스텝
-            st.session_state.gd_path.append(next_point)
-            st.session_state.gd_step += 1
-            st.session_state.educational_logs.append(step_result)
-            
-            # 애니메이션 프레임 표시
-            fig_anim = plot_gd(
+        # 모든 스텝을 한번에 계산
+        for _ in range(st.session_state.steps_slider):
+            next_point, step_result = gradient_descent_step(
                 f_np_func, 
                 dx_np_func, 
                 dy_np_func, 
-                st.session_state.x_min_max_slider, 
-                st.session_state.y_min_max_slider,
-                st.session_state.gd_path, 
-                min_point_scipy_coords, 
-                current_animation_cam,
-                st.session_state.educational_mode
+                st.session_state.gd_path[-1], 
+                st.session_state.learning_rate_input
             )
-            graph_placeholder.plotly_chart(fig_anim, use_container_width=True)
             
-            # 애니메이션 지연
-            time.sleep(0.2)
-            
-            # 다음 스텝으로 진행 또는 종료
-            if st.session_state.gd_step < st.session_state.steps_slider:
-                st.rerun()
-            else:
-                st.session_state.play = False
-                st.session_state.play_just_finished = True
-                st.rerun()
-        else:  # 오류 발생
-            st.session_state.messages.append(("error", step_result))
-            st.session_state.play = False
-            st.rerun()
-    else:
-        # 정적 그래프 표시
-        current_display_cam = CAMERA_ANGLES[st.session_state.selected_camera_option_name]
+            if isinstance(step_result, dict):  # 성공적인 스텝
+                st.session_state.gd_path.append(next_point)
+                st.session_state.gd_step += 1
+                st.session_state.educational_logs.append(step_result)
+            else:  # 오류 발생
+                st.session_state.messages.append(("error", step_result))
+                break
         
-        if st.session_state.get("play_just_finished", False):
-            current_display_cam = st.session_state.get("animation_camera_eye", current_display_cam)
-            st.session_state.play_just_finished = False
+        # 카메라 각도 설정
+        st.session_state.animation_camera_eye = CAMERA_ANGLES[st.session_state.selected_camera_option_name]
         
-        fig_static = plot_gd(
-            f_np_func, 
-            dx_np_func, 
-            dy_np_func, 
-            st.session_state.x_min_max_slider, 
-            st.session_state.y_min_max_slider,
-            st.session_state.gd_path, 
-            min_point_scipy_coords, 
-            current_display_cam,
-            st.session_state.educational_mode
-        )
-        graph_placeholder.plotly_chart(fig_static, use_container_width=True, key="main_chart_static")
+        # 재실행하여 최종 결과 표시
+        st.rerun()
+    
+    # 정적 그래프 표시
+    current_display_cam = CAMERA_ANGLES[st.session_state.selected_camera_option_name]
+    
+    fig_static = plot_gd(
+        f_np_func, 
+        dx_np_func, 
+        dy_np_func, 
+        st.session_state.x_min_max_slider, 
+        st.session_state.y_min_max_slider,
+        st.session_state.gd_path, 
+        min_point_scipy_coords, 
+        current_display_cam,
+        st.session_state.educational_mode
+    )
+    graph_placeholder.plotly_chart(fig_static, use_container_width=True, key="main_chart_static")
     
     # 분석 보기 버튼
     if analytics_btn:
@@ -967,27 +938,26 @@ def main():
         elif msg_type == "success":
             st.success(msg_content)
     
-    # 애니메이션 중이 아닐 때 메시지 초기화
-    if not st.session_state.get("play", False):
-        st.session_state.messages = []
+    # 메시지 초기화
+    st.session_state.messages = []
         
-        # 최종 상태 표시
-        if len(st.session_state.gd_path) > 1:
-            last_x_final, last_y_final = st.session_state.gd_path[-1]
-            try:
-                last_z_final = f_np_func(last_x_final, last_y_final)
-                grad_x_final = dx_np_func(last_x_final, last_y_final)
-                grad_y_final = dy_np_func(last_x_final, last_y_final)
-                grad_norm_final = np.sqrt(grad_x_final**2 + grad_y_final**2)
-                
-                if np.isnan(last_z_final) or np.isinf(last_z_final):
-                    st.error("🚨 함수 값이 발산했습니다! (NaN 또는 무한대)")
-                elif st.session_state.gd_step >= st.session_state.steps_slider and grad_norm_final > 1e-2:
-                    st.warning(f"⚠️ 최대 반복({st.session_state.steps_slider}) 도달, 기울기({grad_norm_final:.4f})가 아직 충분히 작지 않음.")
-                elif grad_norm_final < 1e-2 and not (np.isnan(grad_norm_final) or np.isinf(grad_norm_final)):
-                    st.success(f"🎉 기울기({grad_norm_final:.4f})가 매우 작아 최적점 또는 안장점에 근접했습니다!")
-            except Exception:
-                pass
+    # 최종 상태 표시
+    if len(st.session_state.gd_path) > 1:
+        last_x_final, last_y_final = st.session_state.gd_path[-1]
+        try:
+            last_z_final = f_np_func(last_x_final, last_y_final)
+            grad_x_final = dx_np_func(last_x_final, last_y_final)
+            grad_y_final = dy_np_func(last_x_final, last_y_final)
+            grad_norm_final = np.sqrt(grad_x_final**2 + grad_y_final**2)
+            
+            if np.isnan(last_z_final) or np.isinf(last_z_final):
+                st.error("🚨 함수 값이 발산했습니다! (NaN 또는 무한대)")
+            elif st.session_state.gd_step >= st.session_state.steps_slider and grad_norm_final > 1e-2:
+                st.warning(f"⚠️ 최대 반복({st.session_state.steps_slider}) 도달, 기울기({grad_norm_final:.4f})가 아직 충분히 작지 않음.")
+            elif grad_norm_final < 1e-2 and not (np.isnan(grad_norm_final) or np.isinf(grad_norm_final)):
+                st.success(f"🎉 기울기({grad_norm_final:.4f})가 매우 작아 최적점 또는 안장점에 근접했습니다!")
+        except Exception:
+            pass
 
 # 애플리케이션 실행
 if __name__ == "__main__":
