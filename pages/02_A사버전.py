@@ -2,8 +2,7 @@ import streamlit as st
 from sympy import symbols, diff, sympify, lambdify, re, im
 import numpy as np
 import plotly.graph_objects as go
-from scipy.optimize import minimize
-# import time # "전체 실행"에서는 time.sleep 사용 안 함
+# import time # 사용 안 함
 
 # ... (st.set_page_config 및 기타 초기 설정은 이전과 동일) ...
 st.set_page_config(layout="wide", page_title="경사 하강법 체험", page_icon="🎢")
@@ -109,7 +108,7 @@ def apply_preset_for_func_type(func_type_name):
     st.session_state.current_step_info = {}
     st.session_state.function_values_history = []
     st.session_state.is_calculating_all_steps = False
-    st.session_state.force_path_reset_flag = True # 프리셋 변경 시 경로 리셋 강제
+    st.session_state.force_path_reset_flag = True 
 
 
 param_keys_to_check = ["x_min_max_slider", "y_min_max_slider", "start_x_slider", "start_y_slider", "learning_rate_input", "steps_slider"]
@@ -135,7 +134,6 @@ steps = st.session_state.steps_slider
 
 x_sym, y_sym = symbols('x y')
 
-# 경로 초기화 조건
 if st.session_state.force_path_reset_flag or \
    "gd_path" not in st.session_state or \
    not st.session_state.gd_path or \
@@ -144,7 +142,7 @@ if st.session_state.force_path_reset_flag or \
    st.session_state.get("last_start_y_eval") != start_y or \
    st.session_state.get("last_lr_eval") != learning_rate:
     
-    if not st.session_state.is_calculating_all_steps: # 전체 계산 중에는 파라미터 변경에 의한 자동 초기화 방지
+    if not st.session_state.is_calculating_all_steps:
         st.session_state.gd_path = [(float(start_x), float(start_y))]
         st.session_state.gd_step = 0
         st.session_state.last_func_eval = func_input_str
@@ -153,14 +151,13 @@ if st.session_state.force_path_reset_flag or \
         st.session_state.last_lr_eval = learning_rate
         st.session_state.messages = []
         st.session_state.current_step_info = {}
-        # f_np 정의 이후에 function_values_history 초기화 필요
-        st.session_state.function_values_history = [] # 임시 초기화, f_np 정의 후 재계산
+        st.session_state.function_values_history = [] 
     st.session_state.force_path_reset_flag = False
 
 
 with st.sidebar:
+    # ... (사이드바 UI는 이전과 동일) ...
     st.header("⚙️ 설정 및 파라미터")
-    # ... (이전과 동일한 expander 내용) ...
     with st.expander("💡 경사 하강법이란?", expanded=False):
         st.markdown("""
         경사 하강법(Gradient Descent)은 함수의 값을 최소화하는 지점을 찾기 위한 반복적인 최적화 알고리즘입니다. 마치 안개 속에서 산의 가장 낮은 지점을 찾아 내려가는 것과 비슷합니다.
@@ -200,7 +197,7 @@ with st.sidebar:
     def on_func_type_change_sidebar():
         new_func_type = st.session_state.func_radio_key_widget
         st.session_state.selected_func_type = new_func_type
-        apply_preset_for_func_type(new_func_type) # 내부에서 force_path_reset_flag = True 설정됨
+        apply_preset_for_func_type(new_func_type)
 
     st.radio(
         "그래프 시점(카메라 각도)",
@@ -223,7 +220,7 @@ with st.sidebar:
     if st.session_state.selected_func_type == "사용자 정의 함수 입력":
         def on_user_func_input_change():
             st.session_state.user_func_input = st.session_state.user_func_text_input_key_widget
-            on_sidebar_param_change() # 공통 콜백 호출
+            on_sidebar_param_change()
         st.text_input("함수 f(x, y) 입력 (예: x**2 + y**2 + sin(x))",
                       value=st.session_state.user_func_input,
                       key="user_func_text_input_key_widget",
@@ -252,7 +249,6 @@ with st.sidebar:
     st.sidebar.subheader("🔬 SciPy 최적화 결과 (참고용)")
     scipy_result_placeholder = st.sidebar.empty()
 
-
 min_point_scipy_coords = None
 parse_error = False
 f_np, dx_np, dy_np = None, None, None
@@ -273,15 +269,15 @@ try:
         dx_np = lambdify((x_sym, y_sym), dx_f_sym, modules=['numpy', {'cos': np.cos, 'sin': np.sin, 'exp': np.exp, 'sqrt': np.sqrt, 'pi': np.pi, 'Abs':np.abs, 'sign': np.sign}])
         dy_np = lambdify((x_sym, y_sym), dy_f_sym, modules=['numpy', {'cos': np.cos, 'sin': np.sin, 'exp': np.exp, 'sqrt': np.sqrt, 'pi': np.pi, 'Abs':np.abs, 'sign': np.sign}])
         
-        # 경로 초기화 후 function_values_history 업데이트 (f_np 정의 후)
+        # 경로 초기화 후 function_values_history 업데이트
         if not st.session_state.function_values_history and "gd_path" in st.session_state and st.session_state.gd_path and callable(f_np):
             try:
-                initial_z = f_np(float(st.session_state.gd_path[0][0]), float(st.session_state.gd_path[0][1]))
-                if isinstance(initial_z, complex): initial_z = initial_z.real
-                st.session_state.function_values_history = [initial_z] if np.isfinite(initial_z) else []
-            except Exception:
-                 st.session_state.function_values_history = []
-
+                # gd_path는 [(x,y)] 형태이므로 gd_path[0][0], gd_path[0][1] 사용
+                initial_z_val = f_np(float(st.session_state.gd_path[0][0]), float(st.session_state.gd_path[0][1]))
+                if isinstance(initial_z_val, complex): initial_z_val = initial_z_val.real
+                if np.isfinite(initial_z_val):
+                     st.session_state.function_values_history.append(initial_z_val)
+            except Exception: pass # 실패 시 빈 리스트 유지
 
     if not parse_error and callable(f_np):
         # ... (SciPy 최적화 로직은 이전과 동일) ...
@@ -297,16 +293,15 @@ try:
                 potential_starts.extend([[3,2], [-2.805, 3.131], [-3.779, -3.283], [3.584, -1.848]])
 
             best_res = None
-            for p_start in potential_starts:
-                if not (x_min <= p_start[0] <= x_max and y_min <= p_start[1] <= y_max):
+            for p_start_scipy in potential_starts: # 변수명 변경
+                if not (x_min <= p_start_scipy[0] <= x_max and y_min <= p_start_scipy[1] <= y_max):
                     continue
                 try:
-                    res_temp = minimize(min_func_scipy, p_start, method='Nelder-Mead', tol=1e-7, options={'maxiter': 500, 'adaptive': True})
+                    res_temp = minimize(min_func_scipy, p_start_scipy, method='Nelder-Mead', tol=1e-7, options={'maxiter': 500, 'adaptive': True})
                     if best_res is None or (res_temp.success and np.isfinite(res_temp.fun) and res_temp.fun < best_res.fun) or \
                        (res_temp.success and np.isfinite(res_temp.fun) and (not best_res or not best_res.success)):
                         best_res = res_temp
-                except Exception:
-                    pass
+                except Exception: pass
 
             if best_res and best_res.success and np.isfinite(best_res.fun):
                 min_x_sp, min_y_sp = best_res.x
@@ -316,15 +311,10 @@ try:
                     if np.isfinite(min_z_sp_val):
                         min_point_scipy_coords = (min_x_sp, min_y_sp, min_z_sp_val)
                         scipy_result_placeholder.markdown(f"""- **위치 (x, y)**: `({min_x_sp:.3f}, {min_y_sp:.3f})` <br> - **함수 값 f(x,y)**: `{min_z_sp_val:.4f}`""", unsafe_allow_html=True)
-                    else:
-                        scipy_result_placeholder.info("SciPy 최적점의 함수 값이 유효하지 않습니다.")
-                else:
-                    scipy_result_placeholder.info("SciPy 최적점이 현재 그래프 범위 밖에 있습니다.")
-            else:
-                scipy_result_placeholder.info("SciPy 최적점을 찾지 못했거나, 결과가 유효하지 않습니다.")
-        except Exception as e_scipy:
-            scipy_result_placeholder.warning(f"SciPy 최적화 중 오류: {str(e_scipy)[:100]}...")
-
+                    else: scipy_result_placeholder.info("SciPy 최적점의 함수 값이 유효하지 않습니다.")
+                else: scipy_result_placeholder.info("SciPy 최적점이 현재 그래프 범위 밖에 있습니다.")
+            else: scipy_result_placeholder.info("SciPy 최적점을 찾지 못했거나, 결과가 유효하지 않습니다.")
+        except Exception as e_scipy: scipy_result_placeholder.warning(f"SciPy 최적화 중 오류: {str(e_scipy)[:100]}...")
 except Exception as e_parse:
     if func_input_str.strip():
         st.error(f"🚨 함수 정의 오류: '{func_input_str}'을(를) 해석할 수 없습니다. 수식을 확인해주세요. (오류: {e_parse})")
@@ -338,10 +328,9 @@ if parse_error:
     dx_np = lambdify((x_s_dummy, y_s_dummy), dx_f_sym_dummy, 'numpy'); dy_np = lambdify((x_s_dummy, y_s_dummy), dy_f_sym_dummy, 'numpy')
     if "gd_path" not in st.session_state or not st.session_state.gd_path :
         st.session_state.gd_path = [(0.,0.)]
-    if "function_values_history" not in st.session_state or not st.session_state.function_values_history: # 추가: 히스토리도 초기화
-        if callable(f_np): # 더미 f_np로 초기값 계산
-            try:
-                st.session_state.function_values_history = [f_np(0.0,0.0)]
+    if "function_values_history" not in st.session_state or not st.session_state.function_values_history:
+        if callable(f_np):
+            try: st.session_state.function_values_history = [f_np(0.0,0.0)]
             except: st.session_state.function_values_history = [0.0]
         else: st.session_state.function_values_history = [0.0]
 
@@ -354,7 +343,7 @@ def plot_graphs(f_np_func, dx_np_func, dy_np_func, x_min_curr, x_max_curr, y_min
     Xs_plot, Ys_plot = np.meshgrid(X_plot, Y_plot)
 
     Zs_plot = np.zeros_like(Xs_plot)
-    CLIP_MIN, CLIP_MAX = -1e4, 1e4
+    CLIP_MIN, CLIP_MAX = -1e4, 1e4 
 
     if callable(f_np_func):
         try:
@@ -365,7 +354,7 @@ def plot_graphs(f_np_func, dx_np_func, dy_np_func, x_min_curr, x_max_curr, y_min
                 Zs_plot = np.where(np.abs(Zs_plot_imag) < 1e-9, Zs_plot_real, np.nan)
             else:
                 Zs_plot = Zs_plot_raw
-            Zs_plot = np.nan_to_num(Zs_plot, nan=0.0, posinf=CLIP_MAX, neginf=CLIP_MIN) # nan=0.0으로 명시
+            Zs_plot = np.nan_to_num(Zs_plot, nan=0.0, posinf=CLIP_MAX, neginf=CLIP_MIN)
             Zs_plot = np.clip(Zs_plot, CLIP_MIN, CLIP_MAX)
         except Exception: 
             Zs_plot = np.zeros_like(Xs_plot)
@@ -374,7 +363,6 @@ def plot_graphs(f_np_func, dx_np_func, dy_np_func, x_min_curr, x_max_curr, y_min
                                 contours_z=dict(show=True, usecolormap=True, highlightcolor="limegreen", project_z=True),
                                 name="함수 표면 f(x,y)", showscale=False))
     
-    # --- 경로 데이터 정제 및 그리기 ---
     px_final, py_final, pz_final, path_texts_final = [], [], [], []
 
     if gd_path_curr and len(gd_path_curr) > 0 and callable(f_np_func):
@@ -384,7 +372,7 @@ def plot_graphs(f_np_func, dx_np_func, dy_np_func, x_min_curr, x_max_curr, y_min
                all(isinstance(coord, (int, float)) and np.isfinite(coord) for coord in pt):
                 valid_points_for_path.append(pt)
         
-        if valid_points_for_path:
+        if valid_points_for_path: # 유효한 포인트가 있을 때만 경로 데이터 생성
             px_temp, py_temp = zip(*valid_points_for_path)
             px_np = np.array(px_temp, dtype=float)
             py_np = np.array(py_temp, dtype=float)
@@ -398,40 +386,63 @@ def plot_graphs(f_np_func, dx_np_func, dy_np_func, x_min_curr, x_max_curr, y_min
                     else: 
                         pz_intermediate.append(val)
                 
-                pz_np = np.array(pz_intermediate, dtype=float)
-                pz_np = np.nan_to_num(pz_np, nan=0.0, posinf=CLIP_MAX, neginf=CLIP_MIN)
-                pz_np = np.clip(pz_np, CLIP_MIN, CLIP_MAX)
+                pz_np_array = np.array(pz_intermediate, dtype=float)
+                pz_np_array = np.nan_to_num(pz_np_array, nan=0.0, posinf=CLIP_MAX, neginf=CLIP_MIN)
+                pz_list_final = np.clip(pz_np_array, CLIP_MIN, CLIP_MAX).tolist() # pz_final 대신 pz_list_final 사용
 
-                # 최종적으로 사용할 데이터 (리스트 형태로 Plotly에 전달)
                 px_final = px_np.tolist()
                 py_final = py_np.tolist()
-                pz_final = pz_np.tolist()
+                pz_final = pz_list_final # 이름 일관성
 
-                if len(px_final) == len(pz_final): # 길이 일치 확인
+                if len(px_final) == len(pz_final):
                     path_texts_final = [f"S{idx}<br>({pt_x:.2f}, {pt_y:.2f})<br>f={p_z_val:.2f}" 
                                       for idx, ((pt_x, pt_y), p_z_val) in enumerate(zip(zip(px_final,py_final), pz_final))]
-                else: # 길이 불일치 시 기본 텍스트
+                else: 
                     path_texts_final = [f"Point {i}" for i in range(len(px_final))]
-
-            except Exception: # pz 계산 중 오류 발생 시
-                px_final = px_np.tolist() if 'px_np' in locals() else []
-                py_final = py_np.tolist() if 'py_np' in locals() else []
-                pz_final = [0.0] * len(px_final)
-                path_texts_final = [f"Error" for _ in range(len(px_final))]
+            except Exception:
+                if 'px_np' in locals() and 'py_np' in locals() : # px_np, py_np가 정의되었다면
+                    px_final = px_np.tolist()
+                    py_final = py_np.tolist()
+                    pz_final = [0.0] * len(px_final)
+                    path_texts_final = [f"Error" for _ in range(len(px_final))]
+                # else: px_final, py_final, pz_final, path_texts_final은 이미 빈 리스트로 초기화됨
     
-    if px_final and py_final and pz_final and (len(px_final) == len(py_final) == len(pz_final) == len(path_texts_final)):
-        fig_3d.add_trace(go.Scatter3d(
-            x=px_final, y=py_final, z=pz_final, mode='lines+markers+text',
-            marker=dict(size=5, color='red', symbol='circle'), 
-            line=dict(color='red', width=4),
-            name="경사 하강 경로", text=path_texts_final, textposition="top right", 
-            textfont=dict(size=10, color='black')
-        ))
+    # 경로 데이터가 유효하고 비어있지 않을 때만 트레이스 추가
+    if px_final and py_final and pz_final and \
+       (len(px_final) == len(py_final) == len(pz_final) == len(path_texts_final)) and \
+       len(px_final) > 0: # 명시적으로 길이가 0보다 큰지 확인
+        try:
+            # === 문제 발생 가능 지점 단순화 테스트 ===
+            fig_3d.add_trace(go.Scatter3d(
+                x=px_final, 
+                y=py_final, 
+                z=pz_final, 
+                mode='markers', # 가장 단순한 모드로 시작
+                marker=dict(size=5, color='red', symbol='circle'), 
+                name="경사 하강 경로 (Test)"
+            ))
+            # 만약 위 코드가 성공하면, 아래 원래 코드로 점진적 복귀
+            # fig_3d.add_trace(go.Scatter3d(
+            #     x=px_final, y=py_final, z=pz_final, mode='lines+markers+text',
+            #     marker=dict(size=5, color='red', symbol='circle'), 
+            #     line=dict(color='red', width=4),
+            #     name="경사 하강 경로", text=path_texts_final, textposition="top right", 
+            #     textfont=dict(size=10, color='black')
+            # ))
+        except ValueError as ve_path: # 구체적인 ValueError를 잡아서 로깅
+            st.error(f"경로 그리기 오류(ValueError): {ve_path}. 데이터 길이: x={len(px_final)}, y={len(py_final)}, z={len(pz_final)}, text={len(path_texts_final)}")
+            # print("DEBUG: px_final:", px_final) # 실제 디버깅 시 값 확인
+            # print("DEBUG: py_final:", py_final)
+            # print("DEBUG: pz_final:", pz_final)
+            # print("DEBUG: path_texts_final:", path_texts_final)
+        except Exception as e_path: # 기타 예외
+             st.error(f"경로 그리기 중 일반 오류: {e_path}")
 
-    # --- 현재 위치 및 기울기 벡터 그리기 (이전 로직과 유사하나, 정제된 px_final, py_final, pz_final 사용) ---
+
     if px_final and not st.session_state.is_calculating_all_steps and callable(dx_np_func) and callable(dy_np_func):
+        # ... (기울기 벡터 그리기 로직은 이전과 동일, px_final, py_final, pz_final 사용) ...
         last_x_gd, last_y_gd, last_z_gd = px_final[-1], py_final[-1], pz_final[-1]
-        if not np.isnan(last_z_gd):
+        if not np.isnan(last_z_gd): # last_z_gd는 이미 클리핑된 값일 수 있음
             try:
                 grad_x_arrow = dx_np_func(last_x_gd, last_y_gd)
                 grad_y_arrow = dy_np_func(last_x_gd, last_y_gd)
@@ -442,8 +453,8 @@ def plot_graphs(f_np_func, dx_np_func, dy_np_func, x_min_curr, x_max_curr, y_min
                 grad_y_arrow = np.clip(np.nan_to_num(grad_y_arrow, nan=0.0, posinf=1e3, neginf=-1e3), -1e3, 1e3)
 
                 if not (np.isnan(grad_x_arrow) or np.isnan(grad_y_arrow)):
-                    current_lr = learning_rate if learning_rate is not None else 0.1 # learning_rate가 None일 경우 대비
-                    arrow_scale = 0.3 * current_lr / 0.1
+                    current_lr_cone = learning_rate if learning_rate is not None and np.isfinite(learning_rate) else 0.1
+                    arrow_scale = 0.3 * current_lr_cone / 0.1
                     arrow_scale = min(arrow_scale, 0.5)
                     fig_3d.add_trace(go.Cone(
                         x=[last_x_gd], y=[last_y_gd], z=[last_z_gd + 0.02 * np.abs(last_z_gd) if last_z_gd != 0 else 0.02],
@@ -452,13 +463,15 @@ def plot_graphs(f_np_func, dx_np_func, dy_np_func, x_min_curr, x_max_curr, y_min
                         showscale=False, anchor="tail", name="현재 기울기 방향",
                         hoverinfo='text', hovertext=f"기울기: ({-grad_x_arrow:.2f}, {-grad_y_arrow:.2f})"
                     ))
-            except Exception: pass # 기울기 벡터 그리기 실패 시 무시
+            except Exception: pass
 
-    if px_final: # 경로가 있을 때만 현재 위치 마커 표시
-        last_x_gd, last_y_gd, last_z_gd = px_final[-1], py_final[-1], pz_final[-1]
-        default_z_for_marker = np.clip(Zs_plot.min() if np.sum(np.isfinite(Zs_plot)) > 0 else 0.0, CLIP_MIN, CLIP_MAX)
+    if px_final:
+        # ... (현재 위치 마커 그리기 로직은 이전과 동일, px_final, py_final, pz_final 사용) ...
+        last_x_gd_marker, last_y_gd_marker, last_z_gd_marker = px_final[-1], py_final[-1], pz_final[-1]
+        default_z_for_marker_plot = np.clip(Zs_plot.min() if np.sum(np.isfinite(Zs_plot)) > 0 else 0.0, CLIP_MIN, CLIP_MAX)
         fig_3d.add_trace(go.Scatter3d(
-            x=[last_x_gd], y=[last_y_gd], z=[last_z_gd if not np.isnan(last_z_gd) else default_z_for_marker],
+            x=[last_x_gd_marker], y=[last_y_gd_marker], 
+            z=[last_z_gd_marker if np.isfinite(last_z_gd_marker) else default_z_for_marker_plot], # isfinite로 한번 더 체크
             mode='markers+text',
             marker=dict(size=8, color='orange', symbol='diamond', line=dict(color='black', width=1.5)),
             text=["현재 위치"], textposition="top left", name="GD 현재 위치"
@@ -477,41 +490,39 @@ def plot_graphs(f_np_func, dx_np_func, dy_np_func, x_min_curr, x_max_curr, y_min
                 text=["SciPy 최적점"], textposition="bottom center", name="SciPy 최적점"
             ))
     
-    z_min_val_for_layout = CLIP_MIN
-    z_max_val_for_layout = CLIP_MAX
-    all_z_values_for_layout = Zs_plot.flatten().tolist() # Zs_plot은 이미 클리핑됨
-    if pz_final: all_z_values_for_layout.extend(pz_final) # pz_final도 이미 클리핑됨
+    z_min_val_for_layout_final, z_max_val_for_layout_final = CLIP_MIN, CLIP_MAX # 변수명 변경
+    all_z_values_for_layout_calc = Zs_plot.flatten().tolist() 
+    if pz_final: all_z_values_for_layout_calc.extend(pz_final)
     
-    finite_z_values = [z for z in all_z_values_for_layout if np.isfinite(z)]
+    finite_z_values_calc = [z_val for z_val in all_z_values_for_layout_calc if np.isfinite(z_val)] # 변수명 변경
 
-    if finite_z_values:
-        z_min_overall = min(finite_z_values)
-        z_max_overall = max(finite_z_values)
+    if finite_z_values_calc:
+        z_min_overall_calc = min(finite_z_values_calc) # 변수명 변경
+        z_max_overall_calc = max(finite_z_values_calc)
         
-        plot_std_val = np.std(finite_z_values) if len(finite_z_values) > 1 else 0.1
-        plot_std_val = np.clip(plot_std_val, 0.1, (CLIP_MAX-CLIP_MIN)/20) # std 범위도 제한
+        plot_std_val_calc = np.std(finite_z_values_calc) if len(finite_z_values_calc) > 1 else 0.1 # 변수명 변경
+        plot_std_val_calc = np.clip(plot_std_val_calc, 0.1, (CLIP_MAX-CLIP_MIN)/20) 
 
-        z_min_val_for_layout = z_min_overall - abs(plot_std_val * 2) # 패딩 늘림
-        z_max_val_for_layout = z_max_overall + abs(plot_std_val * 2)
+        z_min_val_for_layout_final = z_min_overall_calc - abs(plot_std_val_calc * 2) 
+        z_max_val_for_layout_final = z_max_overall_calc + abs(plot_std_val_calc * 2)
         
-        if z_min_val_for_layout == z_max_val_for_layout: # 모든 z값이 동일할 경우
-            z_min_val_for_layout -= 0.5
-            z_max_val_for_layout += 0.5
-    else: # 유한한 z값이 하나도 없는 경우
-        z_min_val_for_layout = -1.0
-        z_max_val_for_layout = 1.0
+        if z_min_val_for_layout_final == z_max_val_for_layout_final:
+            z_min_val_for_layout_final -= 0.5
+            z_max_val_for_layout_final += 0.5
+    else: 
+        z_min_val_for_layout_final = -1.0
+        z_max_val_for_layout_final = 1.0
         
-    z_min_val_for_layout = np.clip(z_min_val_for_layout, CLIP_MIN, CLIP_MAX)
-    z_max_val_for_layout = np.clip(z_max_val_for_layout, CLIP_MIN, CLIP_MAX)
-    if z_min_val_for_layout >= z_max_val_for_layout:
-        z_max_val_for_layout = z_min_val_for_layout + 1.0
-
+    z_min_val_for_layout_final = np.clip(z_min_val_for_layout_final, CLIP_MIN, CLIP_MAX)
+    z_max_val_for_layout_final = np.clip(z_max_val_for_layout_final, CLIP_MIN, CLIP_MAX)
+    if z_min_val_for_layout_final >= z_max_val_for_layout_final:
+        z_max_val_for_layout_final = z_min_val_for_layout_final + 1.0
 
     fig_3d.update_layout(
         scene=dict(xaxis_title='x', yaxis_title='y', zaxis_title='f(x, y)',
                    camera=dict(eye=current_camera_eye_func),
                    aspectmode='cube',
-                   zaxis=dict(range=[z_min_val_for_layout, z_max_val_for_layout])
+                   zaxis=dict(range=[z_min_val_for_layout_final, z_max_val_for_layout_final])
                   ),
         height=550, margin=dict(l=0, r=0, t=40, b=0),
         title_text="3D 함수 표면 및 경사 하강 경로", title_x=0.5,
@@ -519,31 +530,32 @@ def plot_graphs(f_np_func, dx_np_func, dy_np_func, x_min_curr, x_max_curr, y_min
     )
 
     fig_2d = go.Figure()
-    valid_history_for_2d = [] # 변수명 변경
+    # ... (2D 그래프 로직은 이전과 동일) ...
+    valid_history_for_2d_plot = [] 
     if function_values_hist_curr and any(val is not None and np.isfinite(val) for val in function_values_hist_curr):
-        valid_history_for_2d = [np.clip(val, CLIP_MIN, CLIP_MAX) for val in function_values_hist_curr if val is not None and np.isfinite(val)]
-        if valid_history_for_2d:
-            fig_2d.add_trace(go.Scatter(y=valid_history_for_2d, mode='lines+markers', name='함숫값 f(x,y) 변화',
+        valid_history_for_2d_plot = [np.clip(val, CLIP_MIN, CLIP_MAX) for val in function_values_hist_curr if val is not None and np.isfinite(val)]
+        if valid_history_for_2d_plot:
+            fig_2d.add_trace(go.Scatter(y=valid_history_for_2d_plot, mode='lines+markers', name='함숫값 f(x,y) 변화',
                                      marker=dict(color='green')))
     fig_2d.update_layout(
         height=250, title_text="반복에 따른 함숫값(손실) 변화", title_x=0.5,
         xaxis_title="반복 횟수 (Step)", yaxis_title="함숫값 f(x,y)",
         margin=dict(l=20, r=20, t=50, b=20)
     )
-    if len(valid_history_for_2d) > 1:
-        min_val_hist = np.min(valid_history_for_2d)
-        max_val_hist = np.max(valid_history_for_2d)
-        padding = (max_val_hist - min_val_hist) * 0.1 if (max_val_hist - min_val_hist) > 1e-6 else 0.1
-        y_axis_min = np.clip(min_val_hist - padding, CLIP_MIN, CLIP_MAX)
-        y_axis_max = np.clip(max_val_hist + padding, CLIP_MIN, CLIP_MAX)
-        if y_axis_min >= y_axis_max: y_axis_max = y_axis_min +1.0
-        fig_2d.update_yaxes(range=[y_axis_min, y_axis_max])
-    elif len(valid_history_for_2d) == 1: # 점이 하나일 때
-        val_single = valid_history_for_2d[0]
-        fig_2d.update_yaxes(range=[val_single - 0.5, val_single + 0.5])
-
+    if len(valid_history_for_2d_plot) > 1:
+        min_val_hist_plot = np.min(valid_history_for_2d_plot) # 변수명 변경
+        max_val_hist_plot = np.max(valid_history_for_2d_plot)
+        padding_plot = (max_val_hist_plot - min_val_hist_plot) * 0.1 if (max_val_hist_plot - min_val_hist_plot) > 1e-6 else 0.1 # 변수명 변경
+        y_axis_min_plot = np.clip(min_val_hist_plot - padding_plot, CLIP_MIN, CLIP_MAX) # 변수명 변경
+        y_axis_max_plot = np.clip(max_val_hist_plot + padding_plot, CLIP_MIN, CLIP_MAX)
+        if y_axis_min_plot >= y_axis_max_plot: y_axis_max_plot = y_axis_min_plot +1.0
+        fig_2d.update_yaxes(range=[y_axis_min_plot, y_axis_max_plot])
+    elif len(valid_history_for_2d_plot) == 1: 
+        val_single_plot = valid_history_for_2d_plot[0] # 변수명 변경
+        fig_2d.update_yaxes(range=[val_single_plot - 0.5, val_single_plot + 0.5])
 
     current_info_md = "#### 📌 현재 스텝 정보\n"
+    # ... (현재 스텝 정보 current_info_md 생성 로직은 이전과 동일) ...
     if not current_step_info_func and ("gd_path" in st.session_state and st.session_state.gd_path):
         curr_x_info_static, curr_y_info_static = st.session_state.gd_path[-1]
         f_val_info_static = 'N/A'
@@ -557,18 +569,12 @@ def plot_graphs(f_np_func, dx_np_func, dy_np_func, x_min_curr, x_max_curr, y_min
         current_info_md += f"- **현재 스텝:** {st.session_state.gd_step}/{steps}\n"
         current_info_md += f"- **현재 위치 $(x, y)$:** `({curr_x_info_static:.3f}, {curr_y_info_static:.3f})`\n"
         current_info_md += f"- **현재 함숫값 $f(x,y)$:** `{f_val_info_static}`\n"
-        if st.session_state.gd_step == 0 :
-            current_info_md += " (경사 하강을 시작하거나 한 스텝 이동하세요)"
-        elif st.session_state.gd_step < steps:
-             current_info_md += " (한 스텝 이동 또는 전체 경로 계산을 계속 진행하세요)"
-        else:
-            current_info_md += " (최대 반복 도달)"
-
-
+        if st.session_state.gd_step == 0 : current_info_md += " (경사 하강을 시작하거나 한 스텝 이동하세요)"
+        elif st.session_state.gd_step < steps: current_info_md += " (한 스텝 이동 또는 전체 경로 계산을 계속 진행하세요)"
+        else: current_info_md += " (최대 반복 도달)"
     elif not current_step_info_func:
         current_info_md += "경사 하강을 시작하세요 (한 스텝 또는 전체 경로 계산)."
     else:
-        # ... (이전과 동일한 current_info_md 생성 로직) ...
         curr_x_info = current_step_info_func.get('curr_x', 'N/A')
         curr_y_info = current_step_info_func.get('curr_y', 'N/A')
         f_val_info = current_step_info_func.get('f_val', 'N/A')
@@ -584,7 +590,7 @@ def plot_graphs(f_np_func, dx_np_func, dy_np_func, x_min_curr, x_max_curr, y_min
         grad_y_str = f"{grad_y_info:.3f}" if isinstance(grad_y_info, (int, float)) and np.isfinite(grad_y_info) else str(grad_y_info)
         next_x_str = f"{next_x_info:.3f}" if isinstance(next_x_info, (int, float)) and np.isfinite(next_x_info) else str(next_x_info)
         next_y_str = f"{next_y_info:.3f}" if isinstance(next_y_info, (int, float)) and np.isfinite(next_y_info) else str(next_y_info)
-        lr_str = f"{learning_rate:.5f}" if isinstance(learning_rate, (int, float)) else str(learning_rate)
+        lr_str = f"{learning_rate:.5f}" if isinstance(learning_rate, (int, float)) and np.isfinite(learning_rate) else str(learning_rate)
 
 
         current_info_md += f"- **현재 스텝:** {st.session_state.gd_step}/{steps}\n"
@@ -593,18 +599,17 @@ def plot_graphs(f_np_func, dx_np_func, dy_np_func, x_min_curr, x_max_curr, y_min
         current_info_md += f"- **기울기 $(\\frac{{\partial f}}{{\partial x}}, \\frac{{\partial f}}{{\partial y}})$:** `({grad_x_str}, {grad_y_str})`\n"
         if st.session_state.gd_step < steps and next_x_info != 'N/A': 
              current_info_md += f"- **학습률 $\\alpha$ :** `{lr_str}`\n"
+             # 모든 관련 변수가 유효한 숫자인지 확인 후 업데이트 식 표시
              if all(isinstance(val, (int, float)) and np.isfinite(val) for val in [curr_x_info, learning_rate, grad_x_info, next_x_info, curr_y_info, grad_y_info, next_y_info]):
                  current_info_md += f"- **업데이트:** $x_{{new}} = {curr_x_info:.3f} - ({learning_rate:.4f}) \\times ({grad_x_info:.3f}) = {next_x_info:.3f}$ \n"
                  current_info_md += f"            $y_{{new}} = {curr_y_info:.3f} - ({learning_rate:.4f}) \\times ({grad_y_info:.3f}) = {next_y_info:.3f}$ \n"
              current_info_md += f"- **다음 위치 $(x_{{new}}, y_{{new}})$:** `({next_x_str}, {next_y_str})`"
-
     return fig_3d, fig_2d, current_info_md
 
 # ... (메인 로직, 버튼 핸들러, 메시지 표시, "더 생각해 볼까요?" 섹션은 이전 버전의 수정된 로직을 유지) ...
-# 플레이스홀더 정의를 메인 스코프로 이동
 graph_placeholder_3d = st.empty()
 graph_placeholder_2d = st.empty()
-step_info_placeholder = st.empty() # col_info 대신 메인 스코프에
+step_info_placeholder = st.empty()
 
 if parse_error and not (callable(f_np) and callable(dx_np) and callable(dy_np)):
     st.warning("함수 오류로 인해 시뮬레이션을 진행할 수 없습니다. 사이드바에서 함수 정의를 수정해주세요.")
@@ -617,11 +622,11 @@ if parse_error and not (callable(f_np) and callable(dx_np) and callable(dy_np)):
     
     gd_path_for_dummy = st.session_state.get("gd_path", [(0.,0.)])
     if not gd_path_for_dummy: gd_path_for_dummy = [(0.,0.)]
-    func_hist_for_dummy = st.session_state.get("function_values_history", []) # 빈 리스트로 시작 가능
-    if not func_hist_for_dummy and gd_path_for_dummy: # 히스토리가 비었고 경로가 있으면 초기값 계산 시도
+    func_hist_for_dummy = st.session_state.get("function_values_history", []) 
+    if not func_hist_for_dummy and gd_path_for_dummy: 
         try: func_hist_for_dummy = [f_np_dummy_local(gd_path_for_dummy[0][0], gd_path_for_dummy[0][1])]
         except: func_hist_for_dummy = [0.0]
-    elif not func_hist_for_dummy: # 둘 다 없으면 기본값
+    elif not func_hist_for_dummy: 
         func_hist_for_dummy = [0.0]
 
     current_step_info_for_dummy = st.session_state.get("current_step_info", {})
@@ -636,28 +641,39 @@ if parse_error and not (callable(f_np) and callable(dx_np) and callable(dy_np)):
     st.stop()
 
 
-col_btn1, col_btn2, col_btn3, col_info_main = st.columns([1.2, 1.8, 1, 2.5]) # col_info_main으로 변경
+col_btn1, col_btn2, col_btn3, col_info_main = st.columns([1.2, 1.8, 1, 2.5]) 
 with col_btn1: step_btn = st.button("🚶 한 스텝 이동", use_container_width=True, disabled=st.session_state.is_calculating_all_steps or parse_error or not callable(f_np))
 with col_btn2: run_all_btn = st.button("🚀 전체 경로 계산", key="run_all_btn_widget_key", use_container_width=True, disabled=st.session_state.is_calculating_all_steps or parse_error or not callable(f_np))
 with col_btn3: reset_btn = st.button("🔄 초기화", key="resetbtn_widget_key", use_container_width=True, disabled=st.session_state.is_calculating_all_steps or parse_error or not callable(f_np))
 
-step_info_placeholder = col_info_main.empty() # 메인 스코프의 플레이스홀더를 컬럼에 할당
+step_info_placeholder = col_info_main.empty()
 
 def perform_one_step():
+    # gd_path와 function_values_history 초기화 로직 개선
     if "gd_path" not in st.session_state or not st.session_state.gd_path:
         st.session_state.gd_path = [(float(start_x), float(start_y))]
-        st.session_state.gd_step = 0
-        st.session_state.function_values_history = [] # 여기서도 초기화
+        st.session_state.gd_step = 0 # gd_step도 함께 초기화
+        st.session_state.function_values_history = [] # 비우고 시작
         if callable(f_np):
             try:
                 initial_z_step = f_np(float(start_x), float(start_y))
                 if isinstance(initial_z_step, complex): initial_z_step = initial_z_step.real
                 if np.isfinite(initial_z_step):
                     st.session_state.function_values_history.append(initial_z_step)
-            except Exception: pass # 오류 시 빈 히스토리 유지
+            except Exception: pass 
+    # 함수 시작 시 gd_path가 있고, 히스토리가 비어있으면, 첫 포인트의 함숫값을 히스토리에 추가
+    elif st.session_state.gd_path and not st.session_state.function_values_history and callable(f_np):
+        if callable(f_np):
+             try:
+                initial_z_step = f_np(st.session_state.gd_path[0][0], st.session_state.gd_path[0][1])
+                if isinstance(initial_z_step, complex): initial_z_step = initial_z_step.real
+                if np.isfinite(initial_z_step):
+                    st.session_state.function_values_history.append(initial_z_step)
+             except: pass
 
 
     if st.session_state.gd_step < steps:
+        # ... (perform_one_step의 나머지 로직은 이전과 동일하게 유지) ...
         curr_x, curr_y = st.session_state.gd_path[-1]
         try:
             if not (callable(f_np) and callable(dx_np) and callable(dy_np)):
@@ -667,16 +683,15 @@ def perform_one_step():
             current_f_val = f_np(curr_x, curr_y)
             if isinstance(current_f_val, complex): current_f_val = current_f_val.real
             
-            grad_x_val = dx_np(curr_x, curr_y) # 기울기 먼저 계산
+            grad_x_val = dx_np(curr_x, curr_y) 
             grad_y_val = dy_np(curr_x, curr_y)
             if isinstance(grad_x_val, complex): grad_x_val = grad_x_val.real
             if isinstance(grad_y_val, complex): grad_y_val = grad_y_val.real
 
-            # current_f_val이 유효하지 않으면 여기서 중단 (기울기 계산은 위에서 이미 수행)
             if not np.isfinite(current_f_val):
                 st.session_state.messages.append(("error", f"현재 위치 ({curr_x:.2f}, {curr_y:.2f})에서 함수 값이 발산(NaN/inf)하여 중단합니다."))
                 st.session_state.current_step_info = {'curr_x': curr_x, 'curr_y': curr_y, 'f_val': np.nan, 
-                                                      'grad_x': grad_x_val if np.isfinite(grad_x_val) else np.nan, # 기울기 값도 유효성 체크
+                                                      'grad_x': grad_x_val if np.isfinite(grad_x_val) else np.nan, 
                                                       'grad_y': grad_y_val if np.isfinite(grad_y_val) else np.nan, 
                                                       'next_x': 'N/A', 'next_y': 'N/A'}
                 return False
@@ -698,7 +713,7 @@ def perform_one_step():
 
                 if np.isfinite(next_f_val):
                      st.session_state.function_values_history.append(next_f_val)
-                else: # 다음 스텝 함숫값이 발산해도 경로는 추가하고, 히스토리에는 NaN 기록
+                else: 
                      st.session_state.function_values_history.append(np.nan) 
 
                 st.session_state.current_step_info = {
@@ -715,8 +730,9 @@ def perform_one_step():
 
 
 if reset_btn:
+    # ... (리셋 버튼 로직은 이전과 동일하게 유지) ...
     st.session_state.selected_func_type = default_func_type
-    apply_preset_for_func_type(st.session_state.selected_func_type) # 내부에서 force_path_reset_flag = True 설정
+    apply_preset_for_func_type(st.session_state.selected_func_type)
     if st.session_state.selected_func_type == "사용자 정의 함수 입력":
         st.session_state.user_func_input = "x**2 + y**2"
     
@@ -725,6 +741,7 @@ if reset_btn:
     
     if st.session_state.selected_func_type == "사용자 정의 함수 입력":
         current_func_input_on_reset = st.session_state.user_func_input
+        if not current_func_input_on_reset.strip(): current_func_input_on_reset = "x**2+y**2" # 비어있으면 기본값
     else:
         current_func_input_on_reset = default_funcs_info.get(st.session_state.selected_func_type)["func"]
 
@@ -733,7 +750,7 @@ if reset_btn:
     st.session_state.is_calculating_all_steps = False
     st.session_state.messages = []
     st.session_state.current_step_info = {}
-    st.session_state.function_values_history = [] # 여기서 초기화
+    st.session_state.function_values_history = [] 
 
     try: 
         f_sym_reset = sympify(current_func_input_on_reset)
@@ -744,21 +761,19 @@ if reset_btn:
         dy_np = lambdify((x_sym, y_sym), dy_f_sym_reset, modules=['numpy', {'cos': np.cos, 'sin': np.sin, 'exp': np.exp, 'sqrt': np.sqrt, 'pi': np.pi, 'Abs':np.abs, 'sign': np.sign}])
         parse_error = False
 
-        if callable(f_np): # f_np가 성공적으로 생성된 후 초기 함숫값 기록
+        if callable(f_np): 
             initial_z_reset = f_np(float(current_start_x_on_reset), float(current_start_y_on_reset))
             if isinstance(initial_z_reset, complex): initial_z_reset = initial_z_reset.real
             if np.isfinite(initial_z_reset):
                 st.session_state.function_values_history.append(initial_z_reset)
     except Exception:
         parse_error = True
-        # 에러 시 더미 함수 설정 (위에서 이미 처리하지만, 여기서도 명시적으로)
         x_s_dummy, y_s_dummy = symbols('x y')
         f_sym_dummy = x_s_dummy**2 + y_s_dummy**2
         f_np = lambdify((x_s_dummy, y_s_dummy), f_sym_dummy, 'numpy')
         dx_f_sym_dummy = diff(f_sym_dummy, x_s_dummy); dy_f_sym_dummy = diff(f_sym_dummy, y_s_dummy)
         dx_np = lambdify((x_s_dummy, y_s_dummy), dx_f_sym_dummy, 'numpy'); dy_np = lambdify((x_s_dummy, y_s_dummy), dy_f_sym_dummy, 'numpy')
         st.session_state.function_values_history = [f_np(0.0,0.0)] if callable(f_np) else [0.0]
-
 
     st.session_state.last_func_eval = current_func_input_on_reset
     st.session_state.last_start_x_eval = current_start_x_on_reset
@@ -778,8 +793,8 @@ if run_all_btn:
         st.session_state.gd_step = 0
         st.session_state.messages = [] 
         st.session_state.current_step_info = {}
-        st.session_state.function_values_history = [] # 초기화
-        if callable(f_np): # 초기 함숫값 기록
+        st.session_state.function_values_history = [] 
+        if callable(f_np): 
             try:
                 initial_z_run_all = f_np(float(start_x), float(start_y))
                 if isinstance(initial_z_run_all, complex): initial_z_run_all = initial_z_run_all.real
@@ -787,43 +802,39 @@ if run_all_btn:
                     st.session_state.function_values_history.append(initial_z_run_all)
             except: pass
 
-
         with st.spinner(f"최대 {steps} 스텝까지 경사 하강 경로 계산 중..."):
             for i in range(steps): 
-                if st.session_state.gd_step >= steps: 
-                    break
-                if not perform_one_step(): 
-                    break
+                if st.session_state.gd_step >= steps: break
+                if not perform_one_step(): break
         
         st.session_state.is_calculating_all_steps = False
         st.rerun() 
 
 if callable(f_np) and callable(dx_np) and callable(dy_np):
-    # 경로 데이터가 없으면 초기화 시도 (앱 첫 로드 또는 완전 초기화 후)
     if "gd_path" not in st.session_state or not st.session_state.gd_path:
         st.session_state.gd_path = [(float(start_x), float(start_y))]
         st.session_state.gd_step = 0
         st.session_state.function_values_history = []
-        try:
-            initial_z_main = f_np(float(start_x), float(start_y))
-            if isinstance(initial_z_main, complex): initial_z_main = initial_z_main.real
-            if np.isfinite(initial_z_main):
-                st.session_state.function_values_history.append(initial_z_main)
-        except: pass
-        # current_step_info는 아직 없음
+        if callable(f_np):
+            try:
+                initial_z_main = f_np(float(start_x), float(start_y))
+                if isinstance(initial_z_main, complex): initial_z_main = initial_z_main.real
+                if np.isfinite(initial_z_main):
+                    st.session_state.function_values_history.append(initial_z_main)
+            except: pass
 
     fig3d_static, fig2d_static, info_md_static = plot_graphs(f_np, dx_np, dy_np, x_min, x_max, y_min, y_max,
                                                              st.session_state.gd_path, st.session_state.function_values_history,
                                                              min_point_scipy_coords, camera_eye, st.session_state.current_step_info)
-    graph_placeholder_3d.plotly_chart(fig3d_static, use_container_width=True, key="main_chart_static_final") # key 변경
-    graph_placeholder_2d.plotly_chart(fig2d_static, use_container_width=True, key="loss_chart_static_final") # key 변경
+    graph_placeholder_3d.plotly_chart(fig3d_static, use_container_width=True, key="main_chart_final_v2") 
+    graph_placeholder_2d.plotly_chart(fig2d_static, use_container_width=True, key="loss_chart_final_v2") 
     step_info_placeholder.markdown(info_md_static, unsafe_allow_html=True)
 
 
 temp_messages = st.session_state.get("messages", [])
 displayed_errors = set() 
+# ... (메시지 표시 로직은 이전과 동일) ...
 for msg_type, msg_content in temp_messages:
-    # ... (메시지 표시 로직은 이전과 동일) ...
     if msg_type == "error" and msg_content not in displayed_errors:
         st.error(msg_content)
         displayed_errors.add(msg_content)
@@ -860,9 +871,7 @@ if not st.session_state.is_calculating_all_steps:
                         st.warning(f"📈 함숫값이 계속 증가하고 있습니다 (현재: {last_z_final:.2e}). 학습률({learning_rate:.4f})이 너무 클 수 있습니다. 줄여보세요.")
             if learning_rate > 0.8:
                  st.warning(f"🔥 학습률({learning_rate:.4f})이 매우 큽니다! 최적점을 지나쳐 발산하거나 진동할 가능성이 높습니다.")
-        except Exception:
-            pass
-
+        except Exception: pass
 
 st.markdown("---")
 st.subheader("🤔 더 생각해 볼까요?")
