@@ -3,9 +3,8 @@ from sympy import symbols, diff, sympify, lambdify
 import numpy as np
 import plotly.graph_objects as go
 
-st.title("딥러닝 경사하강법 애니메이션 체험")
+st.title("딥러닝 경사하강법 애니메이션 체험 (기울기 방향 시점)")
 
-# 함수 입력 및 범위/학습률/초기값
 func_input = st.text_input("함수 f(x, y)를 입력하세요 (예: x**2 + y**2)", value="x**2 + y**2")
 x_min, x_max = st.slider("x 범위", -10, 10, (-5, 5))
 y_min, y_max = st.slider("y 범위", -10, 10, (-5, 5))
@@ -17,14 +16,12 @@ steps = st.slider("최대 반복 횟수", 1, 50, 15)
 
 x, y = symbols('x y')
 
-# ---- 상태 저장: 경로, 현재 스텝, 재생중 여부 ----
 if "gd_path" not in st.session_state or st.session_state.get("last_func", "") != func_input:
     st.session_state.gd_path = [(float(start_x), float(start_y))]
     st.session_state.gd_step = 0
     st.session_state.play = False
     st.session_state.last_func = func_input
 
-# ---- 버튼 컨트롤 ----
 col1, col2, col3 = st.columns([1,1,2])
 with col1:
     step_btn = st.button("한 스텝 이동")
@@ -33,7 +30,6 @@ with col2:
 with col3:
     reset_btn = st.button("🔄 초기화", key="resetbtn")
 
-# ---- 수식 및 미분 ----
 try:
     f = sympify(func_input)
     f_np = lambdify((x, y), f, modules='numpy')
@@ -42,24 +38,19 @@ try:
     dx_np = lambdify((x, y), dx_f, modules='numpy')
     dy_np = lambdify((x, y), dy_f, modules='numpy')
 
-    # 실제 최소점 찾기 (이차함수라면 해석적, 일반적으론 수치해석)
-    # 2차 함수 기준: (0,0) 혹은 미분=0인 지점
     from scipy.optimize import minimize
-
     def min_func(vars):
         return f_np(vars[0], vars[1])
-
     res = minimize(min_func, [start_x, start_y])
     min_x, min_y = res.x
     min_z = f_np(min_x, min_y)
 
-    # ---- 경사하강법 경로 ----
     if reset_btn:
         st.session_state.gd_path = [(float(start_x), float(start_y))]
         st.session_state.gd_step = 0
         st.session_state.play = False
 
-    # 스텝 단추
+    # 한 스텝 이동
     if step_btn and st.session_state.gd_step < steps:
         curr_x, curr_y = st.session_state.gd_path[-1]
         grad_x = dx_np(curr_x, curr_y)
@@ -74,29 +65,7 @@ try:
     if play_btn:
         st.session_state.play = True
 
-    if st.session_state.play and st.session_state.gd_step < steps:
-        for _ in range(st.session_state.gd_step, steps):
-            curr_x, curr_y = st.session_state.gd_path[-1]
-            grad_x = dx_np(curr_x, curr_y)
-            grad_y = dy_np(curr_x, curr_y)
-            next_x = curr_x - learning_rate * grad_x
-            next_y = curr_y - learning_rate * grad_y
-            st.session_state.gd_path.append((next_x, next_y))
-            st.session_state.gd_step += 1
-            # 실감나게 보여주기 위해
-            fig_placeholder = st.empty()
-            # 아래 시각화 함수 이용해서 중간 결과 표시
-            fig_placeholder.plotly_chart(
-                lambda: plot_gd(
-                    f_np, dx_np, dy_np, x_min, x_max, y_min, y_max,
-                    st.session_state.gd_path, (min_x, min_y, min_z)
-                ),
-                use_container_width=True
-            )
-            time.sleep(0.15)
-        st.session_state.play = False
-
-    # ---- 시각화 ----
+    # 시각화 함수
     def plot_gd(f_np, dx_np, dy_np, x_min, x_max, y_min, y_max, gd_path, min_point):
         X = np.linspace(x_min, x_max, 80)
         Y = np.linspace(y_min, y_max, 80)
@@ -106,7 +75,6 @@ try:
         fig = go.Figure()
         fig.add_trace(go.Surface(x=X, y=Y, z=Zs, opacity=0.6, colorscale='Viridis', showscale=False))
 
-        # 경사하강법 경로
         px, py = zip(*gd_path)
         pz = [f_np(x, y) for x, y in gd_path]
         fig.add_trace(go.Scatter3d(
@@ -119,7 +87,6 @@ try:
             textposition="top center"
         ))
 
-        # 각 지점의 기울기(gradient) 벡터 표시 (마지막 10개)
         arrow_scale = 0.45
         for i in range(-1, -min(11, len(gd_path)), -1):
             gx, gy = gd_path[i]
@@ -136,7 +103,6 @@ try:
                 anchor="tail", name="기울기"
             ))
 
-        # 실제 최소점 (녹색)
         min_x, min_y, min_z = min_point
         fig.add_trace(go.Scatter3d(
             x=[min_x], y=[min_y], z=[min_z],
@@ -147,7 +113,6 @@ try:
             name="최적점"
         ))
 
-        # 경사하강법 마지막 점 (파란색)
         last_x, last_y = gd_path[-1]
         last_z = f_np(last_x, last_y)
         fig.add_trace(go.Scatter3d(
@@ -159,16 +124,44 @@ try:
             name="최종점"
         ))
 
+        # === 카메라 시점: 기울기 방향 정면 ===
+        grad_x = dx_np(last_x, last_y)
+        grad_y = dy_np(last_x, last_y)
+        grad_norm = np.sqrt(grad_x**2 + grad_y**2) + 1e-6
+        cam_distance = 2.0
+        eye_x = last_x - cam_distance * grad_x / grad_norm
+        eye_y = last_y - cam_distance * grad_y / grad_norm
+        eye_z = last_z + 1.5
+
         fig.update_layout(
             scene=dict(
-                xaxis_title='x', yaxis_title='y', zaxis_title='f(x, y)'
+                xaxis_title='x', yaxis_title='y', zaxis_title='f(x, y)',
+                camera=dict(eye=dict(x=eye_x, y=eye_y, z=eye_z))
             ),
             width=800, height=600, margin=dict(l=10, r=10, t=30, b=10),
-            title="경사하강법 경로 vs 최적점"
+            title="경사하강법 경로 vs 최적점 (기울기 방향 시점)"
         )
         return fig
 
-    # 한 스텝씩/모두 실행 아닐 때, 현재 상태 표시
+    # 애니메이션 루프
+    if st.session_state.play and st.session_state.gd_step < steps:
+        fig_placeholder = st.empty()
+        for _ in range(st.session_state.gd_step, steps):
+            curr_x, curr_y = st.session_state.gd_path[-1]
+            grad_x = dx_np(curr_x, curr_y)
+            grad_y = dy_np(curr_x, curr_y)
+            next_x = curr_x - learning_rate * grad_x
+            next_y = curr_y - learning_rate * grad_y
+            st.session_state.gd_path.append((next_x, next_y))
+            st.session_state.gd_step += 1
+            fig_placeholder.plotly_chart(
+                plot_gd(f_np, dx_np, dy_np, x_min, x_max, y_min, y_max, st.session_state.gd_path, (min_x, min_y, min_z)),
+                use_container_width=True
+            )
+            time.sleep(0.15)
+        st.session_state.play = False
+
+    # 한 스텝/일반 출력
     st.plotly_chart(
         plot_gd(f_np, dx_np, dy_np, x_min, x_max, y_min, y_max,
                 st.session_state.gd_path, (min_x, min_y, min_z)),
