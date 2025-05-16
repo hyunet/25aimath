@@ -295,11 +295,11 @@ if reset_btn:
     st.session_state.function_values_history = []
     st.session_state.gd_step = 0
     st.session_state.current_step_info = {}
-    st.experimental_rerun()
+    st.rerun()
 
 if step_btn and not st.session_state.is_calculating_all_steps:
     perform_one_step()
-    st.experimental_rerun()
+    st.rerun()
 
 if run_all_btn and not st.session_state.is_calculating_all_steps:
     st.session_state.is_calculating_all_steps = True
@@ -307,7 +307,7 @@ if run_all_btn and not st.session_state.is_calculating_all_steps:
         if not perform_one_step():
             break
     st.session_state.is_calculating_all_steps = False
-    st.experimental_rerun()
+    st.rerun()
 
 # ------------------------------------------------------------------------------
 # 9. 그래프 그리기
