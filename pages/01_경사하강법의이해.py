@@ -14,7 +14,7 @@ st.caption("제작: 서울고 송석리 선생님 | 개선: Gemini AI")
 angle_options = {
     "사선(전체 보기)": dict(x=1.7, y=1.7, z=1.2),
     "정면(x+방향)": dict(x=2.0, y=0.0, z=0.5), 
-    "정면(y+방향)": dict(x=0.0, y=2.0, z=0.5),
+    "정면(y+방향)": dict(x=0.0, y=2.0, z=0.5), # 안장점 함수 기본 시점으로 사용
     "위에서 내려다보기": dict(x=0.0, y=0.0, z=3.0),
     "뒤쪽(x-방향)": dict(x=-2.0, y=0.0, z=0.5),
     "옆(y-방향)": dict(x=0.0, y=-2.0, z=0.5)
@@ -23,7 +23,8 @@ default_angle_option_name = "정면(x+방향)"
 
 default_funcs = {
     "볼록 함수 (최적화 쉬움, 예: x²+y²)": "x**2 + y**2",
-    "안장점 함수 (최적화 어려움, 예: x²-y²)": "x**2 - y**2",
+    # 요청사항 2: 안장점 함수 변경 및 이름 수정
+    "안장점 함수 (예: 0.3x²-0.3y²)": "0.3*x**2 - 0.3*y**2", 
     "Himmelblau 함수 (다중 최적점)": "(x**2 + y - 11)**2 + (x + y**2 - 7)**2",
     "복잡한 함수 (Rastrigin 유사)": "20 + (x**2 - 10*cos(2*3.14159*x)) + (y**2 - 10*cos(2*3.14159*y))",
     "사용자 정의 함수 입력": ""
@@ -47,62 +48,64 @@ if "user_func_input" not in st.session_state:
     st.session_state.user_func_input = "x**2 + y**2" 
 
 def apply_preset_for_func_type(func_type_name, is_initial_load=False):
-    # is_initial_load: True이면 모든 파라미터를 프리셋으로 덮어쓰고, False(on_change)이면 기존 사용자 정의 값 유지 시도
-    
-    # 공통적으로 필요한 키들이 세션 상태에 없으면 해당 함수 유형의 프리셋으로 먼저 채움
-    # (새 함수 유형으로 변경 시 이전에 없던 키가 필요할 수 있으므로)
-    keys_to_check = ["x_min_max_slider", "y_min_max_slider", "start_x_slider", "start_y_slider", "learning_rate_input", "steps_slider"]
-    
-    # 현재 상태를 가져오거나, 없는 경우 임시 기본값 사용 (오류 방지용)
     current_x_range = st.session_state.get("x_min_max_slider", default_x_range_convex)
     current_y_range = st.session_state.get("y_min_max_slider", default_y_range_convex)
 
-    if func_type_name == "안장점 함수 (최적화 어려움, 예: x²-y²)":
-        st.session_state.x_min_max_slider = (-4.0, 4.0) if is_initial_load else current_x_range
-        st.session_state.y_min_max_slider = (-4.0, 4.0) if is_initial_load else current_y_range
-        st.session_state.start_x_slider = 2.5
-        st.session_state.start_y_slider = 0.5
-        st.session_state.selected_camera_option_name = "사선(전체 보기)"
-        st.session_state.steps_slider = 35
-        st.session_state.learning_rate_input = 0.05
+    if func_type_name == "안장점 함수 (예: 0.3x²-0.3y²)": # 수정된 함수 이름
+        st.session_state.x_min_max_slider = (-4.0, 4.0) 
+        st.session_state.y_min_max_slider = (-4.0, 4.0) 
+        st.session_state.start_x_slider = 2.0 # 안장점 추천 시작 x
+        st.session_state.start_y_slider = 1.0 # 안장점 추천 시작 y
+        st.session_state.selected_camera_option_name = "정면(y+방향)" # 요청사항 1: 카메라 각도 변경
+        st.session_state.steps_slider = 40 # 스텝 수 조정
+        st.session_state.learning_rate_input = 0.1 # 학습률 조정
     elif func_type_name == "Himmelblau 함수 (다중 최적점)":
-        st.session_state.x_min_max_slider = (-6.0, 6.0) if is_initial_load else current_x_range
-        st.session_state.y_min_max_slider = (-6.0, 6.0) if is_initial_load else current_y_range
+        st.session_state.x_min_max_slider = (-6.0, 6.0) 
+        st.session_state.y_min_max_slider = (-6.0, 6.0) 
         st.session_state.start_x_slider = 1.0
         st.session_state.start_y_slider = 1.0
         st.session_state.selected_camera_option_name = "사선(전체 보기)"
         st.session_state.steps_slider = 60
         st.session_state.learning_rate_input = 0.01
     elif func_type_name == "복잡한 함수 (Rastrigin 유사)":
-        st.session_state.x_min_max_slider = (-5.0, 5.0) if is_initial_load else current_x_range
-        st.session_state.y_min_max_slider = (-5.0, 5.0) if is_initial_load else current_y_range
+        st.session_state.x_min_max_slider = (-5.0, 5.0) 
+        st.session_state.y_min_max_slider = (-5.0, 5.0) 
         st.session_state.start_x_slider = 3.5
         st.session_state.start_y_slider = -2.5
         st.session_state.selected_camera_option_name = "사선(전체 보기)"
         st.session_state.steps_slider = 70
         st.session_state.learning_rate_input = 0.02
     elif func_type_name == "볼록 함수 (최적화 쉬움, 예: x²+y²)":
-        st.session_state.x_min_max_slider = default_x_range_convex if is_initial_load else current_x_range
-        st.session_state.y_min_max_slider = default_y_range_convex if is_initial_load else current_y_range
+        st.session_state.x_min_max_slider = default_x_range_convex 
+        st.session_state.y_min_max_slider = default_y_range_convex 
         st.session_state.start_x_slider = default_start_x_convex
         st.session_state.start_y_slider = default_start_y_convex
         st.session_state.selected_camera_option_name = default_angle_option_name
         st.session_state.steps_slider = default_steps_convex
         st.session_state.learning_rate_input = default_lr_convex
     
-    # 시작점이 새 범위 내에 있도록 조정 (프리셋 적용 후)
+    # "사용자 정의 함수 입력"의 경우, is_initial_load가 True일 때만 기본값으로 설정하고,
+    # 사용자가 함수 유형을 변경하여 넘어온 경우에는 이전 사용자 정의 값을 유지하도록 할 수 있음.
+    # 여기서는 일단 다른 파라미터는 볼록 함수 기준으로 설정.
+    elif func_type_name == "사용자 정의 함수 입력" and is_initial_load:
+        st.session_state.x_min_max_slider = default_x_range_convex
+        st.session_state.y_min_max_slider = default_y_range_convex
+        st.session_state.start_x_slider = default_start_x_convex
+        st.session_state.start_y_slider = default_start_y_convex
+        st.session_state.selected_camera_option_name = default_angle_option_name
+        st.session_state.steps_slider = default_steps_convex
+        st.session_state.learning_rate_input = default_lr_convex
+
+
     new_x_min, new_x_max = st.session_state.x_min_max_slider
     new_y_min, new_y_max = st.session_state.y_min_max_slider
     st.session_state.start_x_slider = max(new_x_min, min(new_x_max, st.session_state.start_x_slider))
     st.session_state.start_y_slider = max(new_y_min, min(new_y_max, st.session_state.start_y_slider))
 
-
-# apply_preset_for_func_type을 사용하여 초기 상태 설정 (앱 첫 로드 시 모든 파라미터 프리셋으로)
 param_keys_to_init = ["x_min_max_slider", "y_min_max_slider", "start_x_slider", "start_y_slider", "learning_rate_input", "steps_slider"]
 is_first_load = not all(key in st.session_state for key in param_keys_to_init)
 if is_first_load:
     apply_preset_for_func_type(st.session_state.selected_func_type, is_initial_load=True)
-
 
 # --- 2. 현재 설정값 결정 (세션 상태 기반) ---
 camera_eye = angle_options[st.session_state.selected_camera_option_name]
@@ -143,16 +146,16 @@ with st.sidebar:
     st.header("⚙️ 설정 및 파라미터")
 
     with st.expander("💡 경사 하강법이란?", expanded=False):
-        st.markdown("""(설명 내용 생략 - 이전과 동일)""")
+        st.markdown("""(설명 내용 생략)""") # 이전과 동일
     with st.expander("📖 주요 파라미터 가이드", expanded=False):
-        st.markdown(f"""(설명 내용 생략 - 이전과 동일)""")
+        st.markdown(f"""(설명 내용 생략)""") # 이전과 동일
 
     st.subheader("📊 함수 및 그래프 설정")
     
     def handle_func_type_change():
-        new_func_type = st.session_state.func_radio_key_widget
-        st.session_state.selected_func_type = new_func_type
-        apply_preset_for_func_type(new_func_type, is_initial_load=True) # 함수 변경 시에는 프리셋 강제 적용
+        new_func_type = st.session_state.func_radio_key_widget # 라디오 버튼 자체의 현재 값
+        st.session_state.selected_func_type = new_func_type # 우리 로직용 세션 상태 업데이트
+        apply_preset_for_func_type(new_func_type, is_initial_load=True) # 함수 변경 시 프리셋 강제 적용
 
     st.radio( 
         "그래프 시점(카메라 각도)",
@@ -163,7 +166,7 @@ with st.sidebar:
     )
     st.radio(
         "함수 유형",
-        func_options,
+        func_options, # 수정된 default_funcs에 따라 업데이트된 func_options 사용
         index = func_options.index(st.session_state.selected_func_type),
         key="func_radio_key_widget", 
         on_change=handle_func_type_change 
@@ -185,7 +188,7 @@ with st.sidebar:
               on_change=lambda: setattr(st.session_state, "y_min_max_slider", st.session_state.y_slider_key_widget))
 
     st.subheader("🔩 경사 하강법 파라미터")
-    current_x_min_ui, current_x_max_ui = st.session_state.x_min_max_slider
+    current_x_min_ui, current_x_max_ui = st.session_state.x_min_max_slider # 슬라이더 범위는 항상 최신 세션 상태 따름
     current_y_min_ui, current_y_max_ui = st.session_state.y_min_max_slider
     st.slider("시작 x 위치", float(current_x_min_ui), float(current_x_max_ui), st.session_state.start_x_slider, step=0.1, 
               key="start_x_key_widget", 
@@ -204,7 +207,8 @@ with st.sidebar:
     scipy_result_placeholder = st.sidebar.empty() 
 
 
-# --- 그래프 그리기 함수 ---
+# --- 그래프 그리기 함수 (plot_gd) ---
+# (이전 코드와 동일하며, GD 최종점 마커만 수정되었음)
 def plot_gd(f_np_func, dx_np_func, dy_np_func, x_min_curr, x_max_curr, y_min_curr, y_max_curr, gd_path_curr, min_point_scipy_curr, current_camera_eye_func):
     X_plot = np.linspace(x_min_curr, x_max_curr, 80) 
     Y_plot = np.linspace(y_min_curr, y_max_curr, 80)
@@ -264,7 +268,7 @@ def plot_gd(f_np_func, dx_np_func, dy_np_func, x_min_curr, x_max_curr, y_min_cur
 
     fig.add_trace(go.Scatter3d(
         x=[last_x_gd], y=[last_y_gd], z=[last_z_gd if not np.isnan(last_z_gd) else Zs_plot.min()], mode='markers+text',
-        marker=dict(size=7, color='orange', symbol='circle', line=dict(color='black', width=1)), # ***** 마커 수정 *****
+        marker=dict(size=7, color='orange', symbol='circle', line=dict(color='black', width=1)), # ***** 마커 수정됨 *****
         text=["GD 최종점"], textposition="top left", name="GD 최종점"
     ))
 
@@ -276,7 +280,7 @@ def plot_gd(f_np_func, dx_np_func, dy_np_func, x_min_curr, x_max_curr, y_min_cur
     )
     return fig
 
-# --- 메인 페이지 레이아웃 ---
+# --- 메인 페이지 레이아웃 및 나머지 로직 (이전과 거의 동일) ---
 if st.session_state.get("play", False):
     st.info("🎥 애니메이션 실행 중...")
 
@@ -321,8 +325,8 @@ dx_np_parsed = lambdify((x_sym, y_sym), dx_f_sym_parsed, modules=['numpy', {'cos
 dy_np_parsed = lambdify((x_sym, y_sym), dy_f_sym_parsed, modules=['numpy', {'cos': np.cos, 'sin': np.sin, 'exp': np.exp, 'sqrt': np.sqrt, 'pi': np.pi}])
 
 if reset_btn:
-    st.session_state.selected_func_type = default_func_type # 함수 유형 먼저 리셋
-    apply_preset_for_func_type(st.session_state.selected_func_type, is_initial_load=True) # 리셋된 함수 유형의 프리셋 적용
+    st.session_state.selected_func_type = default_func_type 
+    apply_preset_for_func_type(st.session_state.selected_func_type, is_initial_load=True) 
     st.session_state.user_func_input = "x**2 + y**2" 
     
     current_start_x_on_reset = st.session_state.start_x_slider 
