@@ -3,7 +3,7 @@ from sympy import symbols, diff, sympify, lambdify
 import numpy as np
 import plotly.graph_objects as go
 
-st.title("3D 곡면, 절단선, 교점 시각화 (AI 미적분)")
+st.title("경사하강법 이해를 위한  - 3D 곡면, 절단선, 교점 시각화(석리송 선생님)")
 
 func_input = st.text_input("함수 f(x, y)를 입력하세요 (예: 2*x**3 + 3*y**3)", value="2*x**3 + 3*y**3")
 x_min, x_max = st.slider("x 범위", -10, 10, (-5, 5))
