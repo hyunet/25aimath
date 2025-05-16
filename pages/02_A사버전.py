@@ -34,6 +34,18 @@ with st.expander("👇사용 방법 자세히 보기"):
 5. 메인 **3D 그래프**와 **함숫값 변화 그래프**를 함께 관찰
 """)
 
+# 버튼들을 먼저 배치하여 그래프 위에 나타나도록 함
+col_btn1, col_btn2, col_btn3, col_info_main = st.columns([1.2, 1.8, 1, 2.5]) 
+with col_btn1: step_btn = st.button("🚶 한 스텝 이동", use_container_width=True, disabled=st.session_state.is_calculating_all_steps or parse_error or not callable(f_np))
+with col_btn2: run_all_btn = st.button("🚀 전체 경로 계산", key="run_all_btn_widget_key", use_container_width=True, disabled=st.session_state.is_calculating_all_steps or parse_error or not callable(f_np))
+with col_btn3: reset_btn = st.button("🔄 초기화", key="resetbtn_widget_key", use_container_width=True, disabled=st.session_state.is_calculating_all_steps or parse_error or not callable(f_np))
+
+step_info_placeholder = col_info_main.empty()
+
+# 이후에 그래프 placeholder 정의
+graph_placeholder_3d = st.empty()
+graph_placeholder_2d = st.empty()
+
 
 angle_options = {
     "사선(전체 보기)": dict(x=1.7, y=1.7, z=1.2),
@@ -615,11 +627,6 @@ def plot_graphs(f_np_func, dx_np_func, dy_np_func, x_min_curr, x_max_curr, y_min
 
     return fig_3d, fig_2d, current_info_md
 
-# ... (메인 로직, 버튼 핸들러, 메시지 표시 등은 이전과 동일하게 유지) ...
-graph_placeholder_3d = st.empty()
-graph_placeholder_2d = st.empty()
-step_info_placeholder = st.empty()
-
 if parse_error and not (callable(f_np) and callable(dx_np) and callable(dy_np)):
     st.warning("함수 오류로 인해 시뮬레이션을 진행할 수 없습니다. 사이드바에서 함수 정의를 수정해주세요.")
     x_s_dummy, y_s_dummy = symbols('x y')
@@ -648,13 +655,6 @@ if parse_error and not (callable(f_np) and callable(dx_np) and callable(dy_np)):
     graph_placeholder_2d.plotly_chart(fig2d_dummy, use_container_width=True)
     step_info_placeholder.markdown(info_md_dummy, unsafe_allow_html=True)
     st.stop()
-
-col_btn1, col_btn2, col_btn3, col_info_main = st.columns([1.2, 1.8, 1, 2.5]) 
-with col_btn1: step_btn = st.button("🚶 한 스텝 이동", use_container_width=True, disabled=st.session_state.is_calculating_all_steps or parse_error or not callable(f_np))
-with col_btn2: run_all_btn = st.button("🚀 전체 경로 계산", key="run_all_btn_widget_key", use_container_width=True, disabled=st.session_state.is_calculating_all_steps or parse_error or not callable(f_np))
-with col_btn3: reset_btn = st.button("🔄 초기화", key="resetbtn_widget_key", use_container_width=True, disabled=st.session_state.is_calculating_all_steps or parse_error or not callable(f_np))
-
-step_info_placeholder = col_info_main.empty()
 
 def perform_one_step():
     if "gd_path" not in st.session_state or not st.session_state.gd_path:
