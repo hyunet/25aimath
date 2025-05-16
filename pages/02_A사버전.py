@@ -2,10 +2,9 @@ import streamlit as st
 from sympy import symbols, diff, sympify, lambdify, re, im
 import numpy as np
 import plotly.graph_objects as go
-from scipy.optimize import minimize
 # import time # 사용 안 함
 
-# ... (st.set_page_config 및 CSS 정의는 이전과 동일) ...
+# ... (st.set_page_config 및 기타 초기 설정은 이전과 동일) ...
 st.set_page_config(layout="wide", page_title="경사 하강법 체험", page_icon="🎢")
 
 st.markdown("""
@@ -14,51 +13,27 @@ st.markdown("""
     .custom-caption {font-size: 0.9em; color: gray; text-align: center; margin-top: 20px;}
     .highlight {font-weight: bold; color: #FF4B4B;} /* Red color for highlight */
     .math-formula {font-family: 'Computer Modern', 'Serif'; font-size: 1.1em; margin: 5px 0;}
-    /* Optional: Add some spacing for the new layout if needed */
-    .custom-section-header {
-        margin-top: 10px;
-        margin-bottom: 5px;
-    }
 </style>
 """, unsafe_allow_html=True)
 
 st.title("🎢 딥러닝 경사 하강법 체험 (교육용)")
 st.caption("제작: 서울고 송석리 선생님 | 교육적 개선: Gemini AI & 구글")
 
-# --- 앱 목표 및 사용 방법 안내 (수정된 부분) ---
-st.markdown("""
-<div class='custom-section-header'>
-**🎯 이 앱의 목표:** 경사 하강법(Gradient Descent)은 딥러닝 모델을 학습시키는 핵심 알고리즘입니다. 
+st.info("""
+**🎯 이 앱의 목표:**
+경사 하강법(Gradient Descent)은 딥러닝 모델을 학습시키는 핵심 알고리즘입니다.
 이 도구를 통해 다음을 직접 체험하고 이해할 수 있습니다:
-</div>
-""", unsafe_allow_html=True)
+1.  경사 하강법이 어떻게 함수의 최저점(또는 안장점)을 찾아가는지 시각적으로 확인합니다.
+2.  **학습률(Learning Rate)**, **시작점**, **반복 횟수** 등 주요 파라미터가 최적화 과정에 미치는 영향을 탐구합니다.
+3.  다양한 형태의 함수(볼록 함수, 안장점, 복잡한 함수 등)에서 경사 하강법이 어떻게 작동하는지 비교해봅니다.
 
-with st.expander("자세한 학습 목표 보기...", expanded=False):
-    st.markdown("""
-    1.  경사 하강법이 어떻게 함수의 최저점(또는 안장점)을 찾아가는지 시각적으로 확인합니다.
-    2.  **학습률(Learning Rate)**, **시작점**, **반복 횟수** 등 주요 파라미터가 최적화 과정에 미치는 영향을 탐구합니다.
-    3.  다양한 형태의 함수(볼록 함수, 안장점, 복잡한 함수 등)에서 경사 하강법이 어떻게 작동하는지 비교해봅니다.
-    """)
-
-# 구분선 또는 간격 추가 (선택 사항)
-# st.markdown("---") 
-
-st.markdown("""
-<div class='custom-section-header'>
 **👇 사용 방법:**
-</div>
-""", unsafe_allow_html=True)
-
-with st.expander("자세한 사용 방법 보기...", expanded=False):
-    st.markdown("""
-    1.  왼쪽 사이드바에서 **함수 유형**을 선택하고, 필요하면 **함수 수식**을 직접 입력하세요.
-    2.  **그래프 시점**, **x, y 범위**를 조절하여 원하는 형태로 그래프를 관찰하세요.
-    3.  **경사 하강법 파라미터**(시작 위치, 학습률, 최대 반복 횟수)를 설정하세요.
-    4.  **[🚶 한 스텝 이동]** 버튼으로 단계별 과정을, **[🚀 전체 경로 계산]** 버튼으로 최종 결과를 빠르게 확인하세요.
-    5.  메인 화면의 **3D 그래프**와 하단의 **함숫값 변화 그래프**를 함께 관찰하며 학습하세요!
-    """)
-# --- 앱 목표 및 사용 방법 안내 끝 ---
-
+1.  왼쪽 사이드바에서 **함수 유형**을 선택하고, 필요하면 **함수 수식**을 직접 입력하세요.
+2.  **그래프 시점**, **x, y 범위**를 조절하여 원하는 형태로 그래프를 관찰하세요.
+3.  **경사 하강법 파라미터**(시작 위치, 학습률, 최대 반복 횟수)를 설정하세요.
+4.  **[🚶 한 스텝 이동]** 버튼으로 단계별 과정을, **[🚀 전체 경로 계산]** 버튼으로 최종 결과를 빠르게 확인하세요.
+5.  메인 화면의 **3D 그래프**와 하단의 **함숫값 변화 그래프**를 함께 관찰하며 학습하세요!
+""")
 
 angle_options = {
     "사선(전체 보기)": dict(x=1.7, y=1.7, z=1.2),
@@ -79,7 +54,7 @@ default_funcs_info = {
     "안장점 함수 (예: 0.3x²-0.3y²)": {
         "func": "0.3*x**2 - 0.3*y**2",
         "desc": "안장점(Saddle Point)을 가집니다. 특정 방향으로는 내려가지만 다른 방향으로는 올라가는 지점입니다. 경사 하강법이 안장점 근처에서 정체될 수 있습니다.<br>🔍 **학습 포인트:** 안장점 주변에서 경사 하강 경로가 어떻게 움직이는지, 학습률이나 시작점에 따라 안장점을 벗어날 수 있는지 관찰하세요.",
-        "preset": {"x_range": (-4.0, 4.0), "y_range": (-4.0, 4.0), "start_x": 4.0, "start_y": 0.0, "lr": 0.1, "steps": 40, "camera": "정면(y+방향)"}
+        "preset": {"x_range": (-4.0, 4.0), "y_range": (-4.0, 4.0), "start_x": 2.0, "start_y": 1.0, "lr": 0.1, "steps": 40, "camera": "정면(y+방향)"}
     },
     "Himmelblau 함수 (다중 최적점)": {
         "func": "(x**2 + y - 11)**2 + (x + y**2 - 7)**2",
@@ -116,8 +91,8 @@ if "is_calculating_all_steps" not in st.session_state:
 if "force_path_reset_flag" not in st.session_state:
     st.session_state.force_path_reset_flag = False
 
-
 def apply_preset_for_func_type(func_type_name):
+    # ... (이전과 동일) ...
     preset = default_funcs_info[func_type_name]["preset"]
     st.session_state.x_min_max_slider = preset["x_range"]
     st.session_state.y_min_max_slider = preset["y_range"]
@@ -134,8 +109,7 @@ def apply_preset_for_func_type(func_type_name):
     st.session_state.current_step_info = {}
     st.session_state.function_values_history = []
     st.session_state.is_calculating_all_steps = False
-    st.session_state.force_path_reset_flag = True 
-
+    st.session_state.force_path_reset_flag = True
 
 param_keys_to_check = ["x_min_max_slider", "y_min_max_slider", "start_x_slider", "start_y_slider", "learning_rate_input", "steps_slider"]
 if not all(key in st.session_state for key in param_keys_to_check):
@@ -155,10 +129,11 @@ x_min, x_max = st.session_state.x_min_max_slider
 y_min, y_max = st.session_state.y_min_max_slider
 start_x = st.session_state.start_x_slider
 start_y = st.session_state.start_y_slider
+# learning_rate None 방지 및 유효성 검사
 lr_input_val = st.session_state.learning_rate_input
 if lr_input_val is None or not np.isfinite(lr_input_val) or lr_input_val <= 0:
-    learning_rate = 0.1 
-    st.session_state.learning_rate_input = learning_rate 
+    learning_rate = 0.1 # 안전한 기본값
+    st.session_state.learning_rate_input = learning_rate # 세션 상태도 업데이트
 else:
     learning_rate = lr_input_val
 steps = st.session_state.steps_slider
@@ -188,6 +163,7 @@ if st.session_state.force_path_reset_flag or \
 
 # --- 사이드바 UI ---
 with st.sidebar:
+    # ... (이전과 동일, unsafe_allow_html=True 적용됨) ...
     st.header("⚙️ 설정 및 파라미터")
     with st.expander("💡 경사 하강법이란?", expanded=False):
         st.markdown("""
@@ -266,10 +242,10 @@ f_np, dx_np, dy_np = None, None, None
 try:
     f_sym = sympify(func_input_str)
     if not (f_sym.has(x_sym) or f_sym.has(y_sym)):
-        if func_input_str.strip(): 
+        if func_input_str.strip(): # 비어있지 않은데 변수가 없으면 에러
             st.error(f"🚨 함수 정의 오류: 함수에 변수 'x' 또는 'y'가 포함되어야 합니다. 입력: {func_input_str}")
             parse_error = True
-        else: f_sym = x_sym**2 + y_sym**2
+        else: f_sym = x_sym**2 + y_sym**2 # 입력이 아예 비었으면 기본 함수로
             
     if not parse_error:
         f_np = lambdify((x_sym, y_sym), f_sym, modules=['numpy', {'cos': np.cos, 'sin': np.sin, 'exp': np.exp, 'sqrt': np.sqrt, 'pi': np.pi, 'Abs':np.abs}])
@@ -289,8 +265,8 @@ try:
             except Exception: pass
 
     if not parse_error and callable(f_np):
+        # ... (SciPy 최적화 로직은 이전과 동일) ...
         try:
-            # ... (SciPy 최적화 로직) ...
             def min_func_scipy(vars_list):
                 val = f_np(vars_list[0], vars_list[1])
                 if isinstance(val, complex): val = val.real if np.isreal(val.real) else np.inf
@@ -328,7 +304,7 @@ except Exception as e_parse_main:
         st.error(f"🚨 함수 정의 오류: '{func_input_str}'을(를) 해석할 수 없습니다. 수식을 확인해주세요. (오류: {e_parse_main})")
     parse_error = True
 
-if parse_error: 
+if parse_error: # 파싱 에러 시 더미 함수로 앱 계속 실행
     x_s_dummy, y_s_dummy = symbols('x y')
     f_sym_dummy = x_s_dummy**2 + y_s_dummy**2
     f_np = lambdify((x_s_dummy, y_s_dummy), f_sym_dummy, 'numpy')
@@ -343,7 +319,6 @@ if parse_error:
         else: st.session_state.function_values_history = [0.0]
 
 
-# --- 5. 그래프 그리기 함수 ---
 def plot_graphs(f_np_func, dx_np_func, dy_np_func, x_min_curr, x_max_curr, y_min_curr, y_max_curr,
                 gd_path_curr, function_values_hist_curr, min_point_scipy_curr, current_camera_eye_func, current_step_info_func):
     fig_3d = go.Figure()
@@ -370,86 +345,112 @@ def plot_graphs(f_np_func, dx_np_func, dy_np_func, x_min_curr, x_max_curr, y_min
                                 contours_z=dict(show=True, usecolormap=True, highlightcolor="limegreen", project_z=True),
                                 name="함수 표면 f(x,y)", showscale=False))
     
-    px_final_plot, py_final_plot, pz_final_plot, path_texts_final_plot = [], [], [], []
+    px_for_plot_final, py_for_plot_final, pz_for_plot_final, path_texts_for_plot_final = [], [], [], [] # 최종 변수명
 
     if gd_path_curr and len(gd_path_curr) > 0 and callable(f_np_func):
-        valid_points_for_path_final_plot = []
-        for pt_final_plot in gd_path_curr: 
-            if isinstance(pt_final_plot, tuple) and len(pt_final_plot) == 2 and \
-               all(isinstance(coord_final_plot, (int, float)) and np.isfinite(coord_final_plot) for coord_final_plot in pt_final_plot):
-                valid_points_for_path_final_plot.append(pt_final_plot)
+        valid_points_for_path_plot_f = [] # 변수명 변경
+        for pt_plot_f in gd_path_curr: 
+            if isinstance(pt_plot_f, tuple) and len(pt_plot_f) == 2 and \
+               all(isinstance(coord_plot_f, (int, float)) and np.isfinite(coord_plot_f) for coord_plot_f in pt_plot_f):
+                valid_points_for_path_plot_f.append(pt_plot_f)
         
-        if valid_points_for_path_final_plot:
-            px_temp_final_plot, py_temp_final_plot = zip(*valid_points_for_path_final_plot) 
-            px_np_final_plot = np.array(px_temp_final_plot, dtype=float) 
-            py_np_final_plot = np.array(py_temp_final_plot, dtype=float)
+        if valid_points_for_path_plot_f:
+            px_temp_plot_f, py_temp_plot_f = zip(*valid_points_for_path_plot_f) 
+            px_np_plot_f = np.array(px_temp_plot_f, dtype=float) 
+            py_np_plot_f = np.array(py_temp_plot_f, dtype=float)
 
             try:
-                pz_raw_final_plot = [f_np_func(pt_x_fp, pt_y_fp) for pt_x_fp, pt_y_fp in zip(px_np_final_plot, py_np_final_plot)] 
-                pz_intermediate_final_plot = [] 
-                for val_fp in pz_raw_final_plot: 
-                    if isinstance(val_fp, complex): 
-                        pz_intermediate_final_plot.append(val_fp.real if np.isreal(val_fp.real) else np.nan)
-                    else: pz_intermediate_final_plot.append(val_fp)
+                pz_raw_plot_f = [f_np_func(pt_x_plot_f, pt_y_plot_f) for pt_x_plot_f, pt_y_plot_f in zip(px_np_plot_f, py_np_plot_f)] 
+                pz_intermediate_plot_f = [] 
+                for val_plot_f in pz_raw_plot_f: 
+                    if isinstance(val_plot_f, complex): 
+                        pz_intermediate_plot_f.append(val_plot_f.real if np.isreal(val_plot_f.real) else np.nan)
+                    else: pz_intermediate_plot_f.append(val_plot_f)
                 
-                pz_np_array_final_plot = np.array(pz_intermediate_final_plot, dtype=float) 
-                pz_np_array_final_plot = np.nan_to_num(pz_np_array_final_plot, nan=0.0, posinf=CLIP_MAX, neginf=CLIP_MIN)
-                pz_final_plot = np.clip(pz_np_array_final_plot, CLIP_MIN, CLIP_MAX).tolist()
+                pz_np_array_plot_f = np.array(pz_intermediate_plot_f, dtype=float) 
+                pz_np_array_plot_f = np.nan_to_num(pz_np_array_plot_f, nan=0.0, posinf=CLIP_MAX, neginf=CLIP_MIN)
+                pz_for_plot_final = np.clip(pz_np_array_plot_f, CLIP_MIN, CLIP_MAX).tolist()
 
-                px_final_plot = px_np_final_plot.tolist()
-                py_final_plot = py_np_final_plot.tolist()
+                px_for_plot_final = px_np_plot_f.tolist()
+                py_for_plot_final = py_np_plot_f.tolist()
 
-                if len(px_final_plot) == len(pz_final_plot):
-                    path_texts_final_plot = [f"S{idx_fp}<br>({pt_x_fp:.2f}, {pt_y_fp:.2f})<br>f={p_z_val_fp:.2f}" 
-                                      for idx_fp, ((pt_x_fp, pt_y_fp), p_z_val_fp) in enumerate(zip(zip(px_final_plot,py_final_plot), pz_final_plot))]
-                else: path_texts_final_plot = [f"Point {i_fp}" for i_fp in range(len(px_final_plot))]
+                if len(px_for_plot_final) == len(pz_for_plot_final):
+                    path_texts_for_plot_final = [f"S{idx_plot_f}<br>({pt_x_plot_f:.2f}, {pt_y_plot_f:.2f})<br>f={p_z_val_plot_f:.2f}" 
+                                      for idx_plot_f, ((pt_x_plot_f, pt_y_plot_f), p_z_val_plot_f) in enumerate(zip(zip(px_for_plot_final,py_for_plot_final), pz_for_plot_final))]
+                else: path_texts_for_plot_final = [f"Point {i_plot_f}" for i_plot_f in range(len(px_for_plot_final))]
             except Exception:
-                if 'px_np_final_plot' in locals() and 'py_np_final_plot' in locals() :
-                    px_final_plot = px_np_final_plot.tolist()
-                    py_final_plot = py_np_final_plot.tolist()
-                    pz_final_plot = [0.0] * len(px_final_plot)
-                    path_texts_final_plot = [f"Error" for _ in range(len(px_final_plot))]
+                if 'px_np_plot_f' in locals() and 'py_np_plot_f' in locals() :
+                    px_for_plot_final = px_np_plot_f.tolist()
+                    py_for_plot_final = py_np_plot_f.tolist()
+                    pz_for_plot_final = [0.0] * len(px_for_plot_final)
+                    path_texts_for_plot_final = [f"Error" for _ in range(len(px_for_plot_final))]
     
-    if px_final_plot and py_final_plot and pz_final_plot and \
-       len(px_final_plot) > 0 and \
-       (len(px_final_plot) == len(py_final_plot) == len(pz_final_plot)):
+    # === 경로 트레이스 추가 (오류 발생 지점) ===
+    if px_for_plot_final and py_for_plot_final and pz_for_plot_final and \
+       len(px_for_plot_final) > 0 and \
+       (len(px_for_plot_final) == len(py_for_plot_final) == len(pz_for_plot_final)): # text 길이 조건은 단순화 버전에서 제외
         try:
-            x_data_plotly_final_p = [float(v) if np.isfinite(v) else 0.0 for v in px_final_plot]
-            y_data_plotly_final_p = [float(v) if np.isfinite(v) else 0.0 for v in py_final_plot]
-            z_data_plotly_final_p = [float(v) if np.isfinite(v) else 0.0 for v in pz_final_plot]
+            # 데이터를 순수 파이썬 float 리스트로 최종 변환 및 유효성 재확인
+            x_data_plotly_final = [float(v) if np.isfinite(v) else 0.0 for v in px_for_plot_final]
+            y_data_plotly_final = [float(v) if np.isfinite(v) else 0.0 for v in py_for_plot_final]
+            z_data_plotly_final = [float(v) if np.isfinite(v) else 0.0 for v in pz_for_plot_final]
 
-            all_x_finite_p = all(np.isfinite(v) for v in x_data_plotly_final_p)
-            all_y_finite_p = all(np.isfinite(v) for v in y_data_plotly_final_p)
-            all_z_finite_p = all(np.isfinite(v) for v in z_data_plotly_final_p)
+            # 모든 데이터가 유효한지 한번 더 확인 (주로 디버깅용)
+            all_x_finite = all(np.isfinite(v) for v in x_data_plotly_final)
+            all_y_finite = all(np.isfinite(v) for v in y_data_plotly_final)
+            all_z_finite = all(np.isfinite(v) for v in z_data_plotly_final)
 
-            # === 단순화된 경로 트레이스 (오류 지점) ===
+            if not (all_x_finite and all_y_finite and all_z_finite):
+                st.warning("경로 데이터에 NaN/inf가 포함되어 있어, 0.0으로 대체 후 플로팅합니다.")
+
+            # 단순화된 트레이스 (오류 발생 지점)
             fig_3d.add_trace(go.Scatter3d(
-                x=x_data_plotly_final_p, 
-                y=y_data_plotly_final_p, 
-                z=z_data_plotly_final_p, 
+                x=x_data_plotly_final, 
+                y=y_data_plotly_final, 
+                z=z_data_plotly_final, 
                 mode='markers', 
-                marker=dict(size=5, color='red', symbol='circle'), 
+                marker=dict(size=5, color='red', symbol='circle'), # 이 부분은 문제가 없어 보임
                 name="경사 하강 경로 (단순화)" 
             ))
-        except ValueError as ve_path_plot_debug_final: # 변수명 변경
-            st.error(f"경로 그리기 오류(ValueError): {ve_path_plot_debug_final}.")
+            
+            # === 원래의 복잡한 트레이스 (위 단순화 버전이 성공하면, 아래를 테스트) ===
+            # if len(path_texts_for_plot_final) == len(x_data_plotly_final):
+            #     fig_3d.add_trace(go.Scatter3d(
+            #         x=x_data_plotly_final, y=y_data_plotly_final, z=z_data_plotly_final, mode='lines+markers+text',
+            #         marker=dict(size=5, color='red', symbol='circle'), 
+            #         line=dict(color='red', width=4),
+            #         name="경사 하강 경로", text=path_texts_for_plot_final, textposition="top right", 
+            #         textfont=dict(size=10, color='black')
+            #     ))
+            # else: # 텍스트 길이 불일치 시 대체 플로팅 (오류 방지)
+            #     fig_3d.add_trace(go.Scatter3d(
+            #         x=x_data_plotly_final, y=y_data_plotly_final, z=z_data_plotly_final, mode='lines+markers',
+            #         marker=dict(size=5, color='red', symbol='circle'), 
+            #         line=dict(color='red', width=4), name="경사 하강 경로 (텍스트 제외)"
+            #     ))
+
+
+        except ValueError as ve_path_plot_debug: # 변수명 변경
+            st.error(f"경로 그리기 오류(ValueError): {ve_path_plot_debug}.")
             with st.expander("오류 발생 시 경로 데이터 상세 (최종 전달 직전):", expanded=True):
-                x_data_content_final = x_data_plotly_final_p if 'x_data_plotly_final_p' in locals() else "정의되지 않음"
-                y_data_content_final = y_data_plotly_final_p if 'y_data_plotly_final_p' in locals() else "정의되지 않음"
-                z_data_content_final = z_data_plotly_final_p if 'z_data_plotly_final_p' in locals() else "정의되지 않음"
+                # x_data_plotly_final 등이 정의되었는지 확인 후 접근
+                x_data_content = x_data_plotly_final if 'x_data_plotly_final' in locals() else "정의되지 않음"
+                y_data_content = y_data_plotly_final if 'y_data_plotly_final' in locals() else "정의되지 않음"
+                z_data_content = z_data_plotly_final if 'z_data_plotly_final' in locals() else "정의되지 않음"
                 
-                st.write(f"x_data (len {len(x_data_content_final if isinstance(x_data_content_final, list) else [])}):", x_data_content_final[:10] if isinstance(x_data_content_final, list) else x_data_content_final)
-                st.write(f"  ㄴ x_data에 NaN/inf 아닌 값만 있는지: {all(np.isfinite(v) for v in x_data_content_final) if isinstance(x_data_content_final, list) and x_data_content_final else 'N/A 또는 빈 리스트'}")
-                st.write(f"y_data (len {len(y_data_content_final if isinstance(y_data_content_final, list) else [])}):", y_data_content_final[:10] if isinstance(y_data_content_final, list) else y_data_content_final)
-                st.write(f"  ㄴ y_data에 NaN/inf 아닌 값만 있는지: {all(np.isfinite(v) for v in y_data_content_final) if isinstance(y_data_content_final, list) and y_data_content_final else 'N/A 또는 빈 리스트'}")
-                st.write(f"z_data (len {len(z_data_content_final if isinstance(z_data_content_final, list) else [])}):", z_data_content_final[:10] if isinstance(z_data_content_final, list) else z_data_content_final)
-                st.write(f"  ㄴ z_data에 NaN/inf 아닌 값만 있는지: {all(np.isfinite(v) for v in z_data_content_final) if isinstance(z_data_content_final, list) and z_data_content_final else 'N/A 또는 빈 리스트'}")
+                st.write(f"x_data (len {len(x_data_content if isinstance(x_data_content, list) else [])}):", x_data_content[:10] if isinstance(x_data_content, list) else x_data_content)
+                st.write(f"  ㄴ x_data에 NaN 포함: {any(not np.isfinite(v) for v in x_data_content) if isinstance(x_data_content, list) else 'N/A'}")
+                st.write(f"y_data (len {len(y_data_content if isinstance(y_data_content, list) else [])}):", y_data_content[:10] if isinstance(y_data_content, list) else y_data_content)
+                st.write(f"  ㄴ y_data에 NaN 포함: {any(not np.isfinite(v) for v in y_data_content) if isinstance(y_data_content, list) else 'N/A'}")
+                st.write(f"z_data (len {len(z_data_content if isinstance(z_data_content, list) else [])}):", z_data_content[:10] if isinstance(z_data_content, list) else z_data_content)
+                st.write(f"  ㄴ z_data에 NaN 포함: {any(not np.isfinite(v) for v in z_data_content) if isinstance(z_data_content, list) else 'N/A'}")
                 st.write("사용된 marker dict: `dict(size=5, color='red', symbol='circle')`")
-        except Exception as e_path_plot_debug_final: # 변수명 변경
-             st.error(f"경로 그리기 중 일반 오류: {e_path_plot_debug_final}")
+        except Exception as e_path_plot_debug: # 변수명 변경
+             st.error(f"경로 그리기 중 일반 오류: {e_path_plot_debug}")
     
     # ... (기울기 벡터, 현재 위치 마커, SciPy 점, Z축 범위, 2D 그래프, 스텝 정보 표시는 이전과 동일하게 유지) ...
     # 해당 부분들의 변수명도 로컬 스코프에 맞게 적절히 수정되어 있다고 가정 (예: _cone, _marker_curr 등)
+
     if px_for_plot_final and not st.session_state.is_calculating_all_steps and callable(dx_np_func) and callable(dy_np_func):
         last_x_gd_cone, last_y_gd_cone, last_z_gd_cone = px_for_plot_final[-1], py_for_plot_final[-1], pz_for_plot_final[-1]
         if np.isfinite(last_z_gd_cone): 
@@ -476,7 +477,7 @@ def plot_graphs(f_np_func, dx_np_func, dy_np_func, x_min_curr, x_max_curr, y_min
             except Exception: pass
 
     if px_for_plot_final:
-        last_x_gd_marker_curr_plot, last_y_gd_marker_curr_plot, last_z_gd_marker_curr_plot = px_for_plot_final[-1], py_for_plot_final[-1], pz_for_plot_final[-1] 
+        last_x_gd_marker_curr_plot, last_y_gd_marker_curr_plot, last_z_gd_marker_curr_plot = px_for_plot_final[-1], py_for_plot_final[-1], pz_for_plot_final[-1]
         default_z_marker_curr_plot = np.clip(Zs_plot.min() if np.sum(np.isfinite(Zs_plot)) > 0 else 0.0, CLIP_MIN, CLIP_MAX)
         fig_3d.add_trace(go.Scatter3d(
             x=[last_x_gd_marker_curr_plot], y=[last_y_gd_marker_curr_plot], 
@@ -498,39 +499,39 @@ def plot_graphs(f_np_func, dx_np_func, dy_np_func, x_min_curr, x_max_curr, y_min
                 text=["SciPy 최적점"], textposition="bottom center", name="SciPy 최적점"
             ))
     
-    z_min_layout_final_val, z_max_layout_final_val = CLIP_MIN, CLIP_MAX # 변수명 변경
-    all_z_layout_final_val = Zs_plot.flatten().tolist() 
-    if pz_for_plot_final: all_z_layout_final_val.extend(pz_for_plot_final)
+    z_min_layout_final, z_max_layout_final = CLIP_MIN, CLIP_MAX 
+    all_z_layout_final = Zs_plot.flatten().tolist() 
+    if pz_for_plot_final: all_z_layout_final.extend(pz_for_plot_final) # pz_for_plot_final 사용
     
-    finite_z_layout_final_val = [z_val_layout_f_v for z_val_layout_f_v in all_z_layout_final_val if np.isfinite(z_val_layout_f_v)] # 변수명 변경
+    finite_z_layout_final = [z_val_layout_f for z_val_layout_f in all_z_layout_final if np.isfinite(z_val_layout_f)] 
 
-    if finite_z_layout_final_val:
-        z_min_overall_layout_final_val = min(finite_z_layout_final_val) # 변수명 변경
-        z_max_overall_layout_final_val = max(finite_z_layout_final_val)
+    if finite_z_layout_final:
+        z_min_overall_layout_final = min(finite_z_layout_final) 
+        z_max_overall_layout_final = max(finite_z_layout_final)
         
-        plot_std_layout_final_val = np.std(finite_z_layout_final_val) if len(finite_z_layout_final_val) > 1 else 0.1 # 변수명 변경
-        plot_std_layout_final_val = np.clip(plot_std_layout_final_val, 0.1, (CLIP_MAX-CLIP_MIN)/20) 
+        plot_std_layout_final = np.std(finite_z_layout_final) if len(finite_z_layout_final) > 1 else 0.1 
+        plot_std_layout_final = np.clip(plot_std_layout_final, 0.1, (CLIP_MAX-CLIP_MIN)/20) 
 
-        z_min_layout_final_val = z_min_overall_layout_final_val - abs(plot_std_layout_final_val * 2) 
-        z_max_layout_final_val = z_max_overall_layout_final_val + abs(plot_std_layout_final_val * 2)
+        z_min_layout_final = z_min_overall_layout_final - abs(plot_std_layout_final * 2) 
+        z_max_layout_final = z_max_overall_layout_final + abs(plot_std_layout_final * 2)
         
-        if z_min_layout_final_val == z_max_layout_final_val:
-            z_min_layout_final_val -= 0.5
-            z_max_layout_final_val += 0.5
+        if z_min_layout_final == z_max_layout_final:
+            z_min_layout_final -= 0.5
+            z_max_layout_final += 0.5
     else: 
-        z_min_layout_final_val = -1.0
-        z_max_layout_final_val = 1.0
+        z_min_layout_final = -1.0
+        z_max_layout_final = 1.0
         
-    z_min_layout_final_val = np.clip(z_min_layout_final_val, CLIP_MIN, CLIP_MAX)
-    z_max_layout_final_val = np.clip(z_max_layout_final_val, CLIP_MIN, CLIP_MAX)
-    if z_min_layout_final_val >= z_max_layout_final_val:
-        z_max_layout_final_val = z_min_layout_final_val + 1.0
+    z_min_layout_final = np.clip(z_min_layout_final, CLIP_MIN, CLIP_MAX)
+    z_max_layout_final = np.clip(z_max_layout_final, CLIP_MIN, CLIP_MAX)
+    if z_min_layout_final >= z_max_layout_final:
+        z_max_layout_final = z_min_layout_final + 1.0
 
     fig_3d.update_layout(
         scene=dict(xaxis_title='x', yaxis_title='y', zaxis_title='f(x, y)',
                    camera=dict(eye=current_camera_eye_func),
                    aspectmode='cube',
-                   zaxis=dict(range=[z_min_layout_final_val, z_max_layout_final_val])
+                   zaxis=dict(range=[z_min_layout_final, z_max_layout_final])
                   ),
         height=550, margin=dict(l=0, r=0, t=40, b=0),
         title_text="3D 함수 표면 및 경사 하강 경로", title_x=0.5,
@@ -538,91 +539,88 @@ def plot_graphs(f_np_func, dx_np_func, dy_np_func, x_min_curr, x_max_curr, y_min
     )
 
     fig_2d = go.Figure()
-    # ... (2D 그래프 로직은 이전과 동일) ...
-    valid_hist_2d_final_plot = [] 
+    valid_hist_2d_final = [] 
     if function_values_hist_curr and any(val is not None and np.isfinite(val) for val in function_values_hist_curr):
-        valid_hist_2d_final_plot = [np.clip(val, CLIP_MIN, CLIP_MAX) for val in function_values_hist_curr if val is not None and np.isfinite(val)]
-        if valid_hist_2d_final_plot:
-            fig_2d.add_trace(go.Scatter(y=valid_hist_2d_final_plot, mode='lines+markers', name='함숫값 f(x,y) 변화',
+        valid_hist_2d_final = [np.clip(val, CLIP_MIN, CLIP_MAX) for val in function_values_hist_curr if val is not None and np.isfinite(val)]
+        if valid_hist_2d_final:
+            fig_2d.add_trace(go.Scatter(y=valid_hist_2d_final, mode='lines+markers', name='함숫값 f(x,y) 변화',
                                      marker=dict(color='green')))
     fig_2d.update_layout(
         height=250, title_text="반복에 따른 함숫값(손실) 변화", title_x=0.5,
         xaxis_title="반복 횟수 (Step)", yaxis_title="함숫값 f(x,y)",
         margin=dict(l=20, r=20, t=50, b=20)
     )
-    if len(valid_hist_2d_final_plot) > 1:
-        min_hist_2d_final_plot = np.min(valid_hist_2d_final_plot) 
-        max_hist_2d_final_plot = np.max(valid_hist_2d_final_plot)
-        padding_2d_final_plot = (max_hist_2d_final_plot - min_hist_2d_final_plot) * 0.1 if (max_hist_2d_final_plot - min_hist_2d_final_plot) > 1e-6 else 0.1 
-        y_min_2d_final_plot = np.clip(min_hist_2d_final_plot - padding_2d_final_plot, CLIP_MIN, CLIP_MAX) 
-        y_max_2d_final_plot = np.clip(max_hist_2d_final_plot + padding_2d_final_plot, CLIP_MIN, CLIP_MAX)
-        if y_min_2d_final_plot >= y_max_2d_final_plot: y_max_2d_final_plot = y_min_2d_final_plot +1.0
-        fig_2d.update_yaxes(range=[y_min_2d_final_plot, y_max_2d_final_plot])
-    elif len(valid_hist_2d_final_plot) == 1: 
-        val_single_2d_final_plot = valid_hist_2d_final_plot[0] 
-        fig_2d.update_yaxes(range=[val_single_2d_final_plot - 0.5, val_single_2d_final_plot + 0.5])
+    if len(valid_hist_2d_final) > 1:
+        min_hist_2d_final = np.min(valid_hist_2d_final) 
+        max_hist_2d_final = np.max(valid_hist_2d_final)
+        padding_2d_final = (max_hist_2d_final - min_hist_2d_final) * 0.1 if (max_hist_2d_final - min_hist_2d_final) > 1e-6 else 0.1 
+        y_min_2d_final = np.clip(min_hist_2d_final - padding_2d_final, CLIP_MIN, CLIP_MAX) 
+        y_max_2d_final = np.clip(max_hist_2d_final + padding_2d_final, CLIP_MIN, CLIP_MAX)
+        if y_min_2d_final >= y_max_2d_final: y_max_2d_final = y_min_2d_final +1.0
+        fig_2d.update_yaxes(range=[y_min_2d_final, y_max_2d_final])
+    elif len(valid_hist_2d_final) == 1: 
+        val_single_2d_final = valid_hist_2d_final[0] 
+        fig_2d.update_yaxes(range=[val_single_2d_final - 0.5, val_single_2d_final + 0.5])
     
-    # ... (current_info_md 생성 로직은 이전과 동일하게 유지) ...
     current_info_md = "#### 📌 현재 스텝 정보\n"
+    # ... (current_info_md 생성 로직은 이전과 동일하게 유지) ...
     if not current_step_info_func and ("gd_path" in st.session_state and st.session_state.gd_path):
-        curr_x_info_static_plot_md, curr_y_info_static_plot_md = st.session_state.gd_path[-1] # 변수명 변경
-        f_val_info_static_plot_md = 'N/A' # 변수명 변경
+        curr_x_info_static_plot, curr_y_info_static_plot = st.session_state.gd_path[-1]
+        f_val_info_static_plot = 'N/A'
         if callable(f_np_func):
             try:
-                f_val_calc_static_plot_md = f_np_func(curr_x_info_static_plot_md, curr_y_info_static_plot_md) # 변수명 변경
-                if isinstance(f_val_calc_static_plot_md, complex): f_val_calc_static_plot_md = f_val_calc_static_plot_md.real
-                f_val_info_static_plot_md = f"{f_val_calc_static_plot_md:.4f}" if np.isfinite(f_val_calc_static_plot_md) else 'N/A (발산)'
+                f_val_calc_static_plot = f_np_func(curr_x_info_static_plot, curr_y_info_static_plot)
+                if isinstance(f_val_calc_static_plot, complex): f_val_calc_static_plot = f_val_calc_static_plot.real
+                f_val_info_static_plot = f"{f_val_calc_static_plot:.4f}" if np.isfinite(f_val_calc_static_plot) else 'N/A (발산)'
             except: pass
         
         current_info_md += f"- **현재 스텝:** {st.session_state.gd_step}/{steps}\n"
-        current_info_md += f"- **현재 위치 $(x, y)$:** `({curr_x_info_static_plot_md:.3f}, {curr_y_info_static_plot_md:.3f})`\n"
-        current_info_md += f"- **현재 함숫값 $f(x,y)$:** `{f_val_info_static_plot_md}`\n"
+        current_info_md += f"- **현재 위치 $(x, y)$:** `({curr_x_info_static_plot:.3f}, {curr_y_info_static_plot:.3f})`\n"
+        current_info_md += f"- **현재 함숫값 $f(x,y)$:** `{f_val_info_static_plot}`\n"
         if st.session_state.gd_step == 0 : current_info_md += " (경사 하강을 시작하거나 한 스텝 이동하세요)"
         elif st.session_state.gd_step < steps: current_info_md += " (한 스텝 이동 또는 전체 경로 계산을 계속 진행하세요)"
         else: current_info_md += " (최대 반복 도달)"
     elif not current_step_info_func:
         current_info_md += "경사 하강을 시작하세요 (한 스텝 또는 전체 경로 계산)."
     else:
-        curr_x_info_plot_md = current_step_info_func.get('curr_x', 'N/A') # 변수명 변경
-        curr_y_info_plot_md = current_step_info_func.get('curr_y', 'N/A')
-        f_val_info_plot_md = current_step_info_func.get('f_val', 'N/A')
-        grad_x_info_plot_md = current_step_info_func.get('grad_x', 'N/A')
-        grad_y_info_plot_md = current_step_info_func.get('grad_y', 'N/A')
-        next_x_info_plot_md = current_step_info_func.get('next_x', 'N/A')
-        next_y_info_plot_md = current_step_info_func.get('next_y', 'N/A')
+        curr_x_info_plot = current_step_info_func.get('curr_x', 'N/A')
+        curr_y_info_plot = current_step_info_func.get('curr_y', 'N/A')
+        f_val_info_plot = current_step_info_func.get('f_val', 'N/A')
+        grad_x_info_plot = current_step_info_func.get('grad_x', 'N/A')
+        grad_y_info_plot = current_step_info_func.get('grad_y', 'N/A')
+        next_x_info_plot = current_step_info_func.get('next_x', 'N/A')
+        next_y_info_plot = current_step_info_func.get('next_y', 'N/A')
 
-        curr_x_str_plot_md = f"{curr_x_info_plot_md:.3f}" if isinstance(curr_x_info_plot_md, (int, float)) and np.isfinite(curr_x_info_plot_md) else str(curr_x_info_plot_md) # 변수명 변경
-        curr_y_str_plot_md = f"{curr_y_info_plot_md:.3f}" if isinstance(curr_y_info_plot_md, (int, float)) and np.isfinite(curr_y_info_plot_md) else str(curr_y_info_plot_md)
-        f_val_str_plot_md = f"{f_val_info_plot_md:.4f}" if isinstance(f_val_info_plot_md, (int, float)) and np.isfinite(f_val_info_plot_md) else str(f_val_info_plot_md)
-        grad_x_str_plot_md = f"{grad_x_info_plot_md:.3f}" if isinstance(grad_x_info_plot_md, (int, float)) and np.isfinite(grad_x_info_plot_md) else str(grad_x_info_plot_md)
-        grad_y_str_plot_md = f"{grad_y_info_plot_md:.3f}" if isinstance(grad_y_info_plot_md, (int, float)) and np.isfinite(grad_y_info_plot_md) else str(grad_y_info_plot_md)
-        next_x_str_plot_md = f"{next_x_info_plot_md:.3f}" if isinstance(next_x_info_plot_md, (int, float)) and np.isfinite(next_x_info_plot_md) else str(next_x_info_plot_md)
-        next_y_str_plot_md = f"{next_y_info_plot_md:.3f}" if isinstance(next_y_info_plot_md, (int, float)) and np.isfinite(next_y_info_plot_md) else str(next_y_info_plot_md)
+        curr_x_str_plot = f"{curr_x_info_plot:.3f}" if isinstance(curr_x_info_plot, (int, float)) and np.isfinite(curr_x_info_plot) else str(curr_x_info_plot)
+        curr_y_str_plot = f"{curr_y_info_plot:.3f}" if isinstance(curr_y_info_plot, (int, float)) and np.isfinite(curr_y_info_plot) else str(curr_y_info_plot)
+        f_val_str_plot = f"{f_val_info_plot:.4f}" if isinstance(f_val_info_plot, (int, float)) and np.isfinite(f_val_info_plot) else str(f_val_info_plot)
+        grad_x_str_plot = f"{grad_x_info_plot:.3f}" if isinstance(grad_x_info_plot, (int, float)) and np.isfinite(grad_x_info_plot) else str(grad_x_info_plot)
+        grad_y_str_plot = f"{grad_y_info_plot:.3f}" if isinstance(grad_y_info_plot, (int, float)) and np.isfinite(grad_y_info_plot) else str(grad_y_info_plot)
+        next_x_str_plot = f"{next_x_info_plot:.3f}" if isinstance(next_x_info_plot, (int, float)) and np.isfinite(next_x_info_plot) else str(next_x_info_plot)
+        next_y_str_plot = f"{next_y_info_plot:.3f}" if isinstance(next_y_info_plot, (int, float)) and np.isfinite(next_y_info_plot) else str(next_y_info_plot)
         
-        current_lr_info_plot_md_val = learning_rate if learning_rate is not None and np.isfinite(learning_rate) else 0.1 # 변수명 변경
-        lr_str_plot_md_val = f"{current_lr_info_plot_md_val:.5f}" # 변수명 변경
+        current_lr_info_plot_val = learning_rate if learning_rate is not None and np.isfinite(learning_rate) else 0.1
+        lr_str_plot_val = f"{current_lr_info_plot_val:.5f}" # 변수명 변경
 
         current_info_md += f"- **현재 스텝:** {st.session_state.gd_step}/{steps}\n"
-        current_info_md += f"- **현재 위치 $(x, y)$:** `({curr_x_str_plot_md}, {curr_y_str_plot_md})`\n"
-        current_info_md += f"- **현재 함숫값 $f(x,y)$:** `{f_val_str_plot_md}`\n"
-        current_info_md += f"- **기울기 $(\\frac{{\partial f}}{{\partial x}}, \\frac{{\partial f}}{{\partial y}})$:** `({grad_x_str_plot_md}, {grad_y_str_plot_md})`\n"
-        if st.session_state.gd_step < steps and next_x_info_plot_md != 'N/A': 
-             current_info_md += f"- **학습률 $\\alpha$ :** `{lr_str_plot_md_val}`\n"
-             if all(isinstance(val, (int, float)) and np.isfinite(val) for val in [curr_x_info_plot_md, current_lr_info_plot_md_val, grad_x_info_plot_md, next_x_info_plot_md, curr_y_info_plot_md, grad_y_info_plot_md, next_y_info_plot_md]):
-                 current_info_md += f"- **업데이트:** $x_{{new}} = {curr_x_info_plot_md:.3f} - ({current_lr_info_plot_md_val:.4f}) \\times ({grad_x_info_plot_md:.3f}) = {next_x_info_plot_md:.3f}$ \n"
-                 current_info_md += f"            $y_{{new}} = {curr_y_info_plot_md:.3f} - ({current_lr_info_plot_md_val:.4f}) \\times ({grad_y_info_plot_md:.3f}) = {next_y_info_plot_md:.3f}$ \n"
-             current_info_md += f"- **다음 위치 $(x_{{new}}, y_{{new}})$:** `({next_x_str_plot_md}, {next_y_str_plot_md})`"
+        current_info_md += f"- **현재 위치 $(x, y)$:** `({curr_x_str_plot}, {curr_y_str_plot})`\n"
+        current_info_md += f"- **현재 함숫값 $f(x,y)$:** `{f_val_str_plot}`\n"
+        current_info_md += f"- **기울기 $(\\frac{{\partial f}}{{\partial x}}, \\frac{{\partial f}}{{\partial y}})$:** `({grad_x_str_plot}, {grad_y_str_plot})`\n"
+        if st.session_state.gd_step < steps and next_x_info_plot != 'N/A': 
+             current_info_md += f"- **학습률 $\\alpha$ :** `{lr_str_plot_val}`\n"
+             if all(isinstance(val, (int, float)) and np.isfinite(val) for val in [curr_x_info_plot, current_lr_info_plot_val, grad_x_info_plot, next_x_info_plot, curr_y_info_plot, grad_y_info_plot, next_y_info_plot]):
+                 current_info_md += f"- **업데이트:** $x_{{new}} = {curr_x_info_plot:.3f} - ({current_lr_info_plot_val:.4f}) \\times ({grad_x_info_plot:.3f}) = {next_x_info_plot:.3f}$ \n"
+                 current_info_md += f"            $y_{{new}} = {curr_y_info_plot:.3f} - ({current_lr_info_plot_val:.4f}) \\times ({grad_y_info_plot:.3f}) = {next_y_info_plot:.3f}$ \n"
+             current_info_md += f"- **다음 위치 $(x_{{new}}, y_{{new}})$:** `({next_x_str_plot}, {next_y_str_plot})`"
 
     return fig_3d, fig_2d, current_info_md
 
-
-# --- 6. 메인 페이지 레이아웃 및 로직 ---
+# ... (메인 로직, 버튼 핸들러, 메시지 표시 등은 이전과 동일하게 유지) ...
 graph_placeholder_3d = st.empty()
 graph_placeholder_2d = st.empty()
-step_info_placeholder = st.empty() # 정의 위치 변경
+step_info_placeholder = st.empty()
 
 if parse_error and not (callable(f_np) and callable(dx_np) and callable(dy_np)):
-    # ... (파싱 에러 시 더미 그래프 표시 로직) ...
     st.warning("함수 오류로 인해 시뮬레이션을 진행할 수 없습니다. 사이드바에서 함수 정의를 수정해주세요.")
     x_s_dummy, y_s_dummy = symbols('x y')
     f_sym_dummy = x_s_dummy**2 + y_s_dummy**2
@@ -648,18 +646,17 @@ if parse_error and not (callable(f_np) and callable(dx_np) and callable(dy_np)):
         
     graph_placeholder_3d.plotly_chart(fig3d_dummy, use_container_width=True)
     graph_placeholder_2d.plotly_chart(fig2d_dummy, use_container_width=True)
-    step_info_placeholder.markdown(info_md_dummy, unsafe_allow_html=True) # 여기서 unsafe_allow_html=True 확인
+    step_info_placeholder.markdown(info_md_dummy, unsafe_allow_html=True)
     st.stop()
 
-col_btn1, col_btn2, col_btn3, col_info_main_btns = st.columns([1.2, 1.8, 1, 2.5]) # 변수명 변경
+col_btn1, col_btn2, col_btn3, col_info_main = st.columns([1.2, 1.8, 1, 2.5]) 
 with col_btn1: step_btn = st.button("🚶 한 스텝 이동", use_container_width=True, disabled=st.session_state.is_calculating_all_steps or parse_error or not callable(f_np))
 with col_btn2: run_all_btn = st.button("🚀 전체 경로 계산", key="run_all_btn_widget_key", use_container_width=True, disabled=st.session_state.is_calculating_all_steps or parse_error or not callable(f_np))
 with col_btn3: reset_btn = st.button("🔄 초기화", key="resetbtn_widget_key", use_container_width=True, disabled=st.session_state.is_calculating_all_steps or parse_error or not callable(f_np))
 
-step_info_placeholder = col_info_main_btns.empty() # 올바른 컬럼에 할당
+step_info_placeholder = col_info_main.empty()
 
 def perform_one_step():
-    # ... (이전과 동일) ...
     if "gd_path" not in st.session_state or not st.session_state.gd_path:
         st.session_state.gd_path = [(float(start_x), float(start_y))]
         st.session_state.gd_step = 0
@@ -708,10 +705,10 @@ def perform_one_step():
                 st.session_state.current_step_info = {'curr_x': curr_x, 'curr_y': curr_y, 'f_val': current_f_val, 'grad_x': grad_x_val, 'grad_y': grad_y_val, 'next_x': 'N/A', 'next_y': 'N/A'}
                 return False
             else:
-                current_learning_rate_step_val = learning_rate if learning_rate is not None and np.isfinite(learning_rate) else 0.1 # 변수명 변경
+                current_learning_rate_step = learning_rate if learning_rate is not None and np.isfinite(learning_rate) else 0.1
                 
-                next_x = curr_x - current_learning_rate_step_val * grad_x_val
-                next_y = curr_y - current_learning_rate_step_val * grad_y_val
+                next_x = curr_x - current_learning_rate_step * grad_x_val
+                next_y = curr_y - current_learning_rate_step * grad_y_val
 
                 st.session_state.gd_path.append((next_x, next_y))
                 st.session_state.gd_step += 1
@@ -737,7 +734,6 @@ def perform_one_step():
     return False
 
 if reset_btn:
-    # ... (리셋 버튼 로직은 이전과 동일하게 유지) ...
     st.session_state.selected_func_type = default_func_type
     apply_preset_for_func_type(st.session_state.selected_func_type)
     if st.session_state.selected_func_type == "사용자 정의 함수 입력":
@@ -841,8 +837,8 @@ if callable(f_np) and callable(dx_np) and callable(dy_np):
     fig3d_display, fig2d_display, info_md_display = plot_graphs(f_np, dx_np, dy_np, x_min, x_max, y_min, y_max,
                                                              st.session_state.gd_path, st.session_state.function_values_history,
                                                              min_point_scipy_coords, camera_eye, st.session_state.current_step_info)
-    graph_placeholder_3d.plotly_chart(fig3d_display, use_container_width=True, key="main_chart_final_v6") # Key 변경
-    graph_placeholder_2d.plotly_chart(fig2d_display, use_container_width=True, key="loss_chart_final_v6") # Key 변경
+    graph_placeholder_3d.plotly_chart(fig3d_display, use_container_width=True, key="main_chart_final_v5") 
+    graph_placeholder_2d.plotly_chart(fig2d_display, use_container_width=True, key="loss_chart_final_v5") 
     step_info_placeholder.markdown(info_md_display, unsafe_allow_html=True)
 
 
@@ -859,7 +855,6 @@ for msg_type_disp, msg_content_disp in temp_messages_display:
 if not st.session_state.is_calculating_all_steps: 
     st.session_state.messages = [] 
     if "gd_path" in st.session_state and len(st.session_state.gd_path) > 1 and callable(f_np) and callable(dx_np) and callable(dy_np):
-        # ... (최종 상태 분석 메시지 로직은 이전과 동일하게 유지) ...
         last_x_final_msg, last_y_final_msg = st.session_state.gd_path[-1] 
         try:
             last_z_final_msg = f_np(last_x_final_msg, last_y_final_msg) 
@@ -868,8 +863,6 @@ if not st.session_state.is_calculating_all_steps:
             grad_y_final_msg = dy_np(last_x_final_msg, last_y_final_msg)
             if isinstance(grad_x_final_msg, complex): grad_x_final_msg = grad_x_final_msg.real
             if isinstance(grad_y_final_msg, complex): grad_y_final_msg = grad_y_final_msg.real
-
-            current_learning_rate_msg = learning_rate if learning_rate is not None and np.isfinite(learning_rate) else 0.1
 
             grad_norm_final_msg = np.sqrt(grad_x_final_msg**2 + grad_y_final_msg**2) if np.isfinite(grad_x_final_msg) and np.isfinite(grad_y_final_msg) else np.inf 
 
@@ -883,10 +876,12 @@ if not st.session_state.is_calculating_all_steps:
             if "function_values_history" in st.session_state and len(st.session_state.function_values_history) > 5:
                 recent_values_msg = [v_msg for v_msg in st.session_state.function_values_history[-5:] if v_msg is not None and np.isfinite(v_msg)] 
                 if len(recent_values_msg) > 2 and np.all(np.diff(recent_values_msg[-3:]) > 0) and np.abs(recent_values_msg[-1]) > np.abs(recent_values_msg[-3]) * 1.2 : 
-                     if current_learning_rate_msg > 0.05: 
-                        st.warning(f"📈 함숫값이 최근 계속 증가하고 있습니다 (현재: {last_z_final_msg:.2e}). 학습률({current_learning_rate_msg:.4f})이 너무 클 수 있습니다. 줄여보세요.")
-            if current_learning_rate_msg > 0.8:
-                 st.warning(f"🔥 학습률({current_learning_rate_msg:.4f})이 매우 큽니다! 최적점을 지나쳐 발산하거나 진동할 가능성이 높습니다.")
+                     current_lr_for_msg_val = learning_rate if learning_rate is not None and np.isfinite(learning_rate) else 0.0 # 변수명 변경
+                     if current_lr_for_msg_val > 0.05: 
+                        st.warning(f"📈 함숫값이 최근 계속 증가하고 있습니다 (현재: {last_z_final_msg:.2e}). 학습률({current_lr_for_msg_val:.4f})이 너무 클 수 있습니다. 줄여보세요.")
+            current_lr_for_large_msg_val = learning_rate if learning_rate is not None and np.isfinite(learning_rate) else 0.0 # 변수명 변경
+            if current_lr_for_large_msg_val > 0.8:
+                 st.warning(f"🔥 학습률({current_lr_for_large_msg_val:.4f})이 매우 큽니다! 최적점을 지나쳐 발산하거나 진동할 가능성이 높습니다.")
         except Exception: pass
 
 st.markdown("---")
