@@ -221,7 +221,7 @@ def plot_gd(f_np_func, dx_np_func, dy_np_func, x_min_curr, x_max_curr, y_min_cur
 
     fig.add_trace(go.Scatter3d(
         x=px, y=py, z=pz, mode='lines+markers+text',
-        marker=dict(size=5, color='red', symbol='circle'), line=dict(color='red', width=3),
+        marker=dict(size=7, color='orange', symbol='circle', line=dict(color='black', width=1)),
         name="경사 하강 경로", text=path_texts, textposition="top right", textfont=dict(size=10, color='black')
     ))
 
