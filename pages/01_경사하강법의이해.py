@@ -4,47 +4,43 @@ import numpy as np
 import plotly.graph_objects as go
 from scipy.optimize import minimize
 import time
-import math
 
-# 페이지 설정 및 제목
-st.set_page_config(page_title="딥러닝 경사하강법 체험", layout="wide")
-st.title("딥러닝 경사하강법 체험 - 최적화 알고리즘의 이해")
-st.markdown("""
-이 애플리케이션은 딥러닝의 핵심 알고리즘인 **경사하강법(Gradient Descent)**을 
-시각적으로 체험할 수 있도록 설계되었습니다. 다양한 함수와 파라미터를 조정하며
-최적화 알고리즘의 작동 원리를 직접 확인해보세요!
-""")
+st.set_page_config(layout="wide", page_title="경사 하강법 체험")
 
-# 사이드바에 학습 가이드 추가
-with st.sidebar:
-    st.header("학습 가이드 📚")
+st.title("🎢 딥러닝 경사하강법 체험 - 다양한 함수와 시점 선택")
+st.caption("제작: 서울고 송석리 선생님 | 개선: Gemini AI")
+
+# --- 교육적 설명 섹션 ---
+with st.expander("💡 경사 하강법(Gradient Descent)이란?", expanded=False):
     st.markdown("""
-    ### 경사하강법이란?
-    경사하강법은 함수의 **최소값**을 찾기 위한 최적화 알고리즘입니다.
-    함수의 기울기(그래디언트)를 계산하고, 기울기가 감소하는 방향으로 
-    조금씩 이동하면서 최솟값을 찾아갑니다.
-    
-    ### 주요 개념:
-    - **그래디언트(∇f)**: 함수의 기울기 벡터, 가장 가파르게 증가하는 방향을 가리킴
-    - **학습률(η)**: 한 번에 이동하는 거리를 결정하는 파라미터
-    - **반복 횟수**: 알고리즘의 실행 스텝 수
-    
-    ### 탐구해볼 활동:
-    1. 학습률을 다양하게 변경하며 수렴 속도 비교하기
-    2. 볼록 함수와 안장점 함수에서의 동작 차이 관찰하기
-    3. 다양한 시작점에서 경로 비교하기
-    4. 사용자 정의 함수 만들어 실험하기
-    
-    ### 중요 용어:
-    - **지역 최소값**: 주변 영역에서는 가장 작은 값이지만 전체에서 최소는 아님
-    - **전역 최소값**: 함수 전체에서 가장 작은 값
-    - **안장점**: 한 방향으로는 최소값, 다른 방향으로는 최대값인 지점
+    경사 하강법은 함수의 최솟값을 찾기 위한 기본적인 1차 최적화 알고리즘입니다.
+    마치 안개가 자욱한 산을 내려오는 등산객처럼, 현재 위치에서 가장 가파른 경사(기울기)를 따라 한 걸음씩 내려가는 과정을 반복합니다.
+
+    - **기울기 (Gradient, $\\nabla f$)**: 각 지점에서 함수 값이 가장 빠르게 증가하는 방향과 그 정도를 나타내는 벡터입니다. 경사 하강법에서는 이 기울기의 **반대 방향**으로 이동하여 함수 값을 줄여나갑니다.
+    - **학습률 (Learning Rate, $\\alpha$)**: 한 번에 얼마나 크게 이동할지(보폭)를 결정하는 값입니다.
+        - 너무 크면: 최적점을 지나쳐 멀어지거나(발산), 주변에서 크게 진동할 수 있습니다.
+        - 너무 작으면: 최적점까지 수렴하는 데 시간이 매우 오래 걸립니다.
+    - **목표**: 반복적인 이동을 통해 기울기가 거의 0인 지점, 즉 더 이상 내려갈 곳이 없는 지점(지역 또는 전역 최적점, 때로는 안장점)에 도달하는 것입니다.
     """)
 
-# 카메라 각도 라디오 버튼 (col 구성 추가)
-st.subheader("1️⃣ 그래프 시점 설정")
-col_camera1, col_camera2 = st.columns([3, 1])
-with col_camera1:
+with st.expander("⚙️ 주요 파라미터 설정 가이드", expanded=False):
+    st.markdown(f"""
+    - **함수 $f(x, y)$ 선택**: 최적화하려는 대상 함수입니다. 이 앱에서는 두 개의 변수 $x, y$를 갖는 함수를 사용합니다.
+        - **볼록 함수 (예: $x^2+y^2$)**: 하나의 전역 최적점(Global Minimum)만을 가집니다. 경사 하강법이 안정적으로 최적점을 찾기 쉬운 이상적인 경우입니다.
+        - **안장점 함수 (예: $x^2-y^2$)**: 안장점(Saddle Point)은 특정 방향으로는 극소값처럼 보이지만 다른 방향으로는 극대값처럼 보이는 지점입니다 (말의 안장 모양과 유사). 이 지점에서는 기울기가 0이므로, 경사 하강법이 안장점에 도달하면 학습이 매우 느려지거나 멈춘 것처럼 보일 수 있습니다. 고차원 문제에서 자주 등장합니다.
+        - **사용자 정의 함수**: Python 문법에 맞는 수식을 직접 입력하여 실험해볼 수 있습니다. (예: `(x-1)**2 + (y+2)**2 + x*y`)
+    - **시작 (x, y) 위치**: 경사 하강법 탐색을 시작하는 초기 지점입니다. 특히 볼록하지 않은 함수에서는 시작 위치에 따라 다른 지역 최적점에 도달할 수 있습니다.
+    - **학습률 (Learning Rate, $\\alpha$)**: 매 스텝에서 기울기에 곱해져 이동 거리를 조절합니다. 수식: $x_{{new}} = x_{{old}} - \\alpha \cdot \frac{{\partial f}}{{\partial x}}$
+    - **최대 반복 횟수**: 경사 하강법을 몇 번이나 반복할지 최대 한계를 정합니다. 이 횟수 내에 최적점에 도달하지 못할 수도 있습니다.
+    - **x, y 범위**: 그래프에 표시될 함수의 범위를 지정합니다.
+    """)
+
+# --- UI 컨트롤 섹션 ---
+col_params1, col_params2 = st.columns(2)
+
+with col_params1:
+    st.subheader("📊 함수 및 그래프 설정")
+    # 카메라 각도 라디오 버튼
     angle_options = {
         "사선(전체 보기)": dict(x=1.7, y=1.7, z=1.2),
         "정면(x+방향)": dict(x=2.0, y=0.0, z=0.5),
@@ -60,739 +56,358 @@ with col_camera1:
         horizontal=True
     )
     camera_eye = angle_options[angle_radio]
-with col_camera2:
-    # 애니메이션 속도 조절 추가
-    animation_speed = st.slider(
-        "애니메이션 속도",
-        min_value=0.05,
-        max_value=1.0,
-        value=0.2,
-        step=0.05,
-        help="애니메이션의 속도를 조절합니다. 값이 작을수록 빠릅니다."
-    )
 
-# 함수 선택 섹션
-st.subheader("2️⃣ 함수 설정")
-default_funcs = {
-    "볼록 함수 (최적화 쉬움, 예: x²+y²)": "x**2 + y**2",
-    "안장점 함수 (최적화 어려움, 예: x²-y²)": "x**2 - y**2",
-    "로젠브록 함수 (바나나 함수, 최적화 어려움)": "100*(y - x**2)**2 + (1 - x)**2",
-    "사인 함수 (여러 지역 최소값)": "np.sin(x) + np.sin(y)",
-    "사용자 정의 함수 입력": ""
-}
-func_options = list(default_funcs.keys())
-
-col_func1, col_func2 = st.columns([1, 1])
-with col_func1:
+    # 함수 선택
+    default_funcs = {
+        "볼록 함수 (최적화 쉬움, 예: x²+y²)": "x**2 + y**2",
+        "안장점 함수 (최적화 어려움, 예: x²-y²)": "x**2 - y**2",
+        "복잡한 함수 (다중 지역 최적점 가능성, 예: Rastrigin 유사)": "20 + (x**2 - 10*cos(2*3.14159*x)) + (y**2 - 10*cos(2*3.14159*y))",
+        "사용자 정의 함수 입력": ""
+    }
+    func_options = list(default_funcs.keys())
     func_radio = st.radio(
         "함수 유형을 선택하세요.",
         func_options,
-        horizontal=False,
+        horizontal=False, # 세로로 변경하여 가독성 향상
         index=0
     )
 
-    # 함수 도움말 추가
-    func_help = {
-        "볼록 함수 (최적화 쉬움, 예: x²+y²)": "이상적인 볼록 함수로, 하나의 최소값을 가집니다. 경사하강법이 항상 전역 최소값으로 수렴합니다.",
-        "안장점 함수 (최적화 어려움, 예: x²-y²)": "안장점 함수로, (0,0)에서 x방향은 증가하고 y방향은 감소합니다. 경사하강법이 수렴하기 어려울 수 있습니다.",
-        "로젠브록 함수 (바나나 함수, 최적화 어려움)": "최적화 알고리즘 테스트에 자주 사용되는 함수입니다. 좁은 곡률의 계곡 형태를 가져 최적화가 어렵습니다.",
-        "사인 함수 (여러 지역 최소값)": "여러 개의 지역 최소값을 가진 함수입니다. 시작점에 따라 다른 최소값으로 수렴할 수 있습니다.",
-        "사용자 정의 함수 입력": "원하는 함수를 직접 입력할 수 있습니다. 변수는 x, y를 사용하세요. numpy 함수는 np.로 시작합니다."
-    }
-    
-    if func_radio in func_help:
-        st.info(func_help[func_radio])
-
-with col_func2:
     if func_radio == "사용자 정의 함수 입력":
-        func_input = st.text_input(
-            "함수 f(x, y)를 입력하세요 (예: x**2 + y**2)", 
-            value="x**2 + y**2",
-            help="Python 구문으로 함수를 입력하세요. NumPy 함수는 np.를 앞에 붙입니다."
-        )
+        func_input_user = st.text_input("함수 f(x, y)를 입력하세요 (예: x**2 + y**2)", value="x**2 + y**2")
+        func_input = func_input_user
     else:
-        func_input = default_funcs[func_radio]
-        st.text_input("함수 f(x, y)", value=func_input, disabled=True)
+        func_input_default = default_funcs[func_radio]
+        st.text_input("선택된 함수 f(x, y)", value=func_input_default, disabled=True)
+        func_input = func_input_default
 
-# 함수 영역 및 파라미터 섹션 
-st.subheader("3️⃣ 경사하강법 파라미터 설정")
-col1, col2 = st.columns(2)
+    x_min_max = st.slider("x 범위", -10.0, 10.0, (-5.0, 5.0), step=0.1)
+    y_min_max = st.slider("y 범위", -10.0, 10.0, (-5.0, 5.0), step=0.1)
+    x_min, x_max = x_min_max
+    y_min, y_max = y_min_max
 
-with col1:
-    x_min, x_max = st.slider("x 범위", -10, 10, (-5, 5))
-    y_min, y_max = st.slider("y 범위", -10, 10, (-5, 5))
+with col_params2:
+    st.subheader("⚙️ 경사 하강법 파라미터")
+    start_x = st.slider("시작 x 위치", float(x_min), float(x_max), 4.0, step=0.1)
+    start_y = st.slider("시작 y 위치", float(y_min), float(y_max), 4.0, step=0.1)
+    learning_rate = st.number_input("학습률 (Learning Rate, α)", min_value=0.0001, max_value=1.0, value=0.1, step=0.001, format="%.4f")
+    steps = st.slider("최대 반복 횟수", 1, 100, 15, help="경사 하강법을 몇 번 반복할지 설정합니다.")
 
-with col2:
-    # 시작점 계산 개선: 슬라이더 범위 내에서 중간값으로 초기화
-    default_x = min(max(0, x_min), x_max) if x_min <= 0 <= x_max else (x_min + x_max) / 2
-    default_y = min(max(0, y_min), y_max) if y_min <= 0 <= y_max else (y_min + y_max) / 2
-    
-    start_x = st.slider("시작 x 위치", x_min, x_max, float(default_x))
-    start_y = st.slider("시작 y 위치", y_min, y_max, float(default_y))
 
-# 학습 파라미터
-col3, col4, col5 = st.columns(3)
-with col3:
-    learning_rate = st.number_input(
-        "학습률(η, Learning Rate)", 
-        min_value=0.001, 
-        max_value=1.0, 
-        value=0.2, 
-        step=0.01, 
-        format="%.3f",
-        help="각 스텝에서 이동하는 거리를 결정합니다. 값이 크면 빠르게 이동하지만 발산할 수 있고, 작으면 안정적이지만 수렴이 느립니다."
-    )
-with col4:
-    steps = st.slider(
-        "최대 반복 횟수", 
-        1, 50, 15,
-        help="경사하강법을 실행할 최대 스텝 수입니다."
-    )
-with col5:
-    # 수렴 임계값 추가
-    convergence_threshold = st.number_input(
-        "수렴 임계값", 
-        min_value=0.0001, 
-        max_value=0.1, 
-        value=0.01, 
-        step=0.001, 
-        format="%.4f",
-        help="그래디언트 크기가 이 값보다 작아지면 알고리즘이 수렴한 것으로 간주합니다."
-    )
-
-# 수식 변수 정의
+# 기호 변수 정의
 x, y = symbols('x y')
 
-# --- 상태 관리 개선 ---
-# 중요 파라미터 변경 시 상태 재설정
-params_key = f"{func_input}_{start_x}_{start_y}_{learning_rate}_{x_min}_{x_max}_{y_min}_{y_max}"
-if "params_key" not in st.session_state or st.session_state.get("params_key", "") != params_key:
+# --- 세션 상태 관리 ---
+if "gd_path" not in st.session_state or \
+   st.session_state.get("last_func", "") != func_input or \
+   st.session_state.get("last_start_x") != start_x or \
+   st.session_state.get("last_start_y") != start_y:
+
     st.session_state.gd_path = [(float(start_x), float(start_y))]
     st.session_state.gd_step = 0
     st.session_state.play = False
-    st.session_state.params_key = params_key
-    st.session_state.converged = False
-    st.session_state.converged_step = -1
+    st.session_state.last_func = func_input
+    st.session_state.last_start_x = start_x
+    st.session_state.last_start_y = start_y
+    # 애니메이션 중 카메라 시점 고정을 위한 변수 (현재 UI 선택 값으로 초기화)
+    st.session_state.animation_camera_eye = camera_eye
+    st.session_state.messages = [] # 메시지 초기화
 
-# 함수 및 그래디언트 계산 함수 (오류 처리 추가)
-def setup_function(func_str):
-    try:
-        # 함수 파싱 및 변환
-        f = sympify(func_str)
-        f_np = lambdify((x, y), f, modules=['numpy', 'scipy'])
-        
-        # 미분 계산
-        dx_f = diff(f, x)
-        dy_f = diff(f, y)
-        dx_np = lambdify((x, y), dx_f, modules=['numpy', 'scipy'])
-        dy_np = lambdify((x, y), dy_f, modules=['numpy', 'scipy'])
-        
-        return f_np, dx_np, dy_np, None
-    except Exception as e:
-        error_msg = f"함수 처리 오류: {str(e)}"
-        return None, None, None, error_msg
-
-# 경사하강법 단계 실행 함수 (범위 체크 및 수렴 확인 추가)
-def gradient_descent_step(curr_x, curr_y, dx_np, dy_np, learning_rate, 
-                          x_min, x_max, y_min, y_max, threshold):
-    # 그래디언트 계산
-    try:
-        grad_x = dx_np(curr_x, curr_y)
-        grad_y = dy_np(curr_x, curr_y)
-    except Exception:
-        # 그래디언트 계산 오류 시 작은 랜덤 값으로 대체
-        grad_x = np.random.uniform(-0.1, 0.1)
-        grad_y = np.random.uniform(-0.1, 0.1)
-    
-    # 그래디언트 크기 계산
-    grad_magnitude = np.sqrt(grad_x**2 + grad_y**2)
-    
-    # 수렴 확인
-    converged = grad_magnitude < threshold
-    
-    # 다음 위치 계산
-    next_x = curr_x - learning_rate * grad_x
-    next_y = curr_y - learning_rate * grad_y
-    
-    # 범위 체크 및 클리핑
-    next_x = np.clip(next_x, x_min, x_max)
-    next_y = np.clip(next_y, y_min, y_max)
-    
-    return next_x, next_y, grad_x, grad_y, grad_magnitude, converged
-
-# 최적점 찾기 함수 (안전한 최적화)
-def find_optimal_point(f_np, x_min, x_max, y_min, y_max):
-    def min_func(vars):
-        return float(f_np(vars[0], vars[1]))
-    
-    # 여러 시작점에서 최적화 시도
-    best_result = None
-    best_value = float('inf')
-    
-    # 그리드 시작점으로 여러 번 최적화 시도
-    start_points = [
-        [0, 0],  # 원점
-        [start_x, start_y],  # 사용자 시작점
-        [(x_min + x_max) / 2, (y_min + y_max) / 2],  # 중앙
-        [x_min, y_min],  # 좌하단
-        [x_max, y_max]   # 우상단
-    ]
-    
-    for start_point in start_points:
-        try:
-            res = minimize(min_func, start_point, bounds=[(x_min, x_max), (y_min, y_max)])
-            if res.success and res.fun < best_value:
-                best_result = res
-                best_value = res.fun
-        except Exception:
-            continue
-    
-    # 최적화 성공했으면 결과 반환, 실패하면 기본값
-    if best_result is not None and best_result.success:
-        min_x, min_y = best_result.x
-        min_z = f_np(min_x, min_y)
-    else:
-        # 최적화 실패 시 기본 최적점 (원점)
-        min_x, min_y = 0, 0
-        try:
-            min_z = f_np(min_x, min_y)
-        except Exception:
-            min_z = 0
-    
-    return min_x, min_y, min_z
-
-# 경사하강법 경로 시각화 함수
-def plot_gd(f_np, dx_np, dy_np, x_min, x_max, y_min, y_max, 
-            gd_path, min_point, camera_eye, converged=False, converged_step=-1):
-    # 그래프용 데이터 생성
-    X = np.linspace(x_min, x_max, 80)
-    Y = np.linspace(y_min, y_max, 80)
+# --- 그래프 그리기 함수 ---
+def plot_gd(f_np, dx_np, dy_np, x_min_plot, x_max_plot, y_min_plot, y_max_plot, gd_path_plot, min_point_scipy, current_camera_eye):
+    X = np.linspace(x_min_plot, x_max_plot, 80)
+    Y = np.linspace(y_min_plot, y_max_plot, 80)
     Xs, Ys = np.meshgrid(X, Y)
     
-    # 함수값 계산 (안전하게)
     try:
         Zs = f_np(Xs, Ys)
-        # NaN이나 무한대 값 처리
-        Zs = np.nan_to_num(Zs, nan=0, posinf=1e3, neginf=-1e3)
-        # 극단적 값 클리핑
-        z_range = max(100, np.percentile(Zs[~np.isinf(Zs) & ~np.isnan(Zs)], 99) - 
-                     np.percentile(Zs[~np.isinf(Zs) & ~np.isnan(Zs)], 1))
-        z_mid = np.median(Zs[~np.isinf(Zs) & ~np.isnan(Zs)])
-        Zs = np.clip(Zs, z_mid - z_range, z_mid + z_range)
-    except Exception:
-        # 오류 발생 시 기본 Z값
-        Zs = Xs**2 + Ys**2
-    
-    # 그래프 생성
+    except Exception as e: # numpy 연산 중 에러 방지 (예: log(0))
+        st.error(f"함수 값 계산 중 오류 (그래프 표면): {e}. 함수나 범위를 확인해주세요.")
+        # 빈 Zs로 대체하거나 에러 처리
+        Zs = np.zeros_like(Xs)
+
+
     fig = go.Figure()
-    
-    # 3D 표면 추가
-    fig.add_trace(go.Surface(
-        x=X, y=Y, z=Zs, 
-        opacity=0.8, 
-        colorscale='Viridis', 
-        showscale=False,
-        contours=dict(
-            z=dict(
-                show=True,
-                usecolormap=True,
-                highlightcolor="limegreen",
-                project=dict(z=True)
-            )
-        )
-    ))
-    
-    # 경사하강법 경로 계산 및 시각화
+    fig.add_trace(go.Surface(x=X, y=Y, z=Zs, opacity=0.7, colorscale='Viridis',
+                             contours_z=dict(show=True, usecolormap=True, highlightcolor="limegreen", project_z=True),
+                             name="함수 표면 f(x,y)", showscale=False))
+
+    px, py = zip(*gd_path_plot)
     try:
-        px, py = zip(*gd_path)
-        pz = [float(f_np(x, y)) for x, y in gd_path]
-    except Exception:
-        # 오류 발생 시 기본 경로
-        px, py = zip(*gd_path)
-        pz = [x**2 + y**2 for x, y in gd_path]
-    
-    # 경로 색상 설정 (수렴 시 초록색으로 변경)
-    path_color = 'red'
-    if converged and converged_step >= 0 and converged_step < len(gd_path) - 1:
-        # 수렴 전은 빨간색, 수렴 후는 초록색
-        fig.add_trace(go.Scatter3d(
-            x=px[:converged_step+1], 
-            y=py[:converged_step+1], 
-            z=pz[:converged_step+1],
-            mode='lines+markers',
-            marker=dict(size=6, color='red'),
-            line=dict(color='red', width=4),
-            name="경로 (수렴 전)"
-        ))
-        fig.add_trace(go.Scatter3d(
-            x=px[converged_step:], 
-            y=py[converged_step:], 
-            z=pz[converged_step:],
-            mode='lines+markers',
-            marker=dict(size=6, color='green'),
-            line=dict(color='green', width=4),
-            name="경로 (수렴 후)"
-        ))
-    else:
-        # 일반 경로 시각화
-        fig.add_trace(go.Scatter3d(
-            x=px, y=py, z=pz,
-            mode='lines+markers+text',
-            marker=dict(size=6, color=path_color),
-            line=dict(color=path_color, width=4),
-            name="경로",
-            text=[f"({x:.2f}, {y:.2f})" for x, y in gd_path],
-            textposition="top center"
-        ))
-    
-    # 경로 라벨 (첫 위치, 현재 위치)
+        pz = [f_np(pt_x, pt_y) for pt_x, pt_y in gd_path_plot]
+    except Exception: # 경로상 점 계산 오류 시 (발산 등)
+        pz = [np.nan_to_num(f_np(pt_x, pt_y)) for pt_x, pt_y in gd_path_plot] # NaN을 숫자로 대체 (0 또는 큰 값)
+
+
+    path_texts = []
+    for idx, (pt_x, pt_y) in enumerate(gd_path_plot):
+        path_texts.append(f"S{idx}<br>({pt_x:.2f}, {pt_y:.2f})")
+
     fig.add_trace(go.Scatter3d(
-        x=[px[0]], y=[py[0]], z=[pz[0]],
-        mode='markers+text',
-        marker=dict(size=8, color='blue'),
-        text=["시작점"],
-        textposition="bottom center",
-        name="시작점"
+        x=px, y=py, z=pz,
+        mode='lines+markers+text',
+        marker=dict(size=5, color='red', symbol='o'),
+        line=dict(color='red', width=3),
+        name="경사 하강 경로",
+        text=path_texts,
+        textposition="top right",
+        textfont=dict(size=10, color='black')
     ))
-    
-    # 그래디언트 화살표 (최대 15개, 스케일 자동 조정)
-    arrow_points = min(15, len(gd_path) - 1)
-    if len(gd_path) > 1:
-        # 화살표 스케일 자동 계산 (그래디언트 크기에 따라 조정)
-        gradients = []
-        for i in range(-1, -min(arrow_points+1, len(gd_path)), -1):
-            gx, gy = gd_path[i]
+
+    # 기울기 화살표 (최근 5개 스텝, 단 첫 스텝은 기울기 없음)
+    arrow_scale_factor = 0.3  # 화살표 기본 크기 조절 인자
+    num_arrows_to_show = min(5, len(gd_path_plot) - 1)
+    if num_arrows_to_show > 0:
+        for i in range(num_arrows_to_show):
+            # 화살표는 이전 점에서 다음 점으로의 방향이 아니라, 각 점에서의 기울기를 표시
+            # gd_path_plot[-(i+2)] 가 (i+1)번째 전 점, gd_path_plot[-(i+1)]이 i번째 전 점
+            arrow_start_idx = len(gd_path_plot) - 1 - i -1 # 화살표 시작점의 인덱스 (경로에서 뒤에서 i+2번째 점)
+            if arrow_start_idx < 0: continue # 경로가 짧으면 스킵
+
+            gx, gy = gd_path_plot[arrow_start_idx]
+            
             try:
-                grad_x = dx_np(gx, gy)
-                grad_y = dy_np(gx, gy)
-                grad_mag = np.sqrt(grad_x**2 + grad_y**2)
-                gradients.append(grad_mag)
-            except Exception:
-                gradients.append(0.1)
-        
-        if gradients:
-            median_grad = np.median(gradients)
-            # 그래디언트 크기에 따라 화살표 스케일 조정
-            arrow_scale = 0.3 / max(0.0001, median_grad)
-            arrow_scale = min(arrow_scale, 1.0)  # 최대 스케일 제한
-            
-            for i in range(-1, -min(arrow_points+1, len(gd_path)), -1):
-                gx, gy = gd_path[i]
-                try:
-                    gz = f_np(gx, gy)
-                    grad_x = dx_np(gx, gy)
-                    grad_y = dy_np(gx, gy)
-                    grad_mag = np.sqrt(grad_x**2 + grad_y**2)
-                    
-                    # 그래디언트 크기에 따른 화살표 색상 (빨간색→노란색→초록색)
-                    arrow_color = 'red'
-                    if grad_mag < convergence_threshold * 2:
-                        arrow_color = 'green'
-                    elif grad_mag < convergence_threshold * 5:
-                        arrow_color = 'yellow'
-                    
-                    fig.add_trace(go.Cone(
-                        x=[gx], y=[gy], z=[gz],
-                        u=[-grad_x * arrow_scale],
-                        v=[-grad_y * arrow_scale],
-                        w=[0],
-                        sizemode="absolute", 
-                        sizeref=0.5,
-                        colorscale=[[0, arrow_color], [1, arrow_color]], 
-                        showscale=False,
-                        anchor="tail", 
-                        name="기울기"
-                    ))
-                except Exception:
-                    continue
+                gz = f_np(gx, gy)
+                grad_x_arrow = dx_np(gx, gy)
+                grad_y_arrow = dy_np(gx, gy)
+            except Exception: # 기울기 계산 중 오류 (발산 등)
+                continue # 해당 화살표는 그리지 않음
+
+            if not (np.isnan(grad_x_arrow) or np.isnan(grad_y_arrow) or np.isnan(gz)):
+                fig.add_trace(go.Cone(
+                    x=[gx], y=[gy], z=[gz + 0.02 * np.abs(gz) if gz != 0 else 0.02], # 표면과 겹치지 않게 살짝 띄움
+                    u=[-grad_x_arrow * arrow_scale_factor],
+                    v=[-grad_y_arrow * arrow_scale_factor],
+                    w=[0], # 2D 평면상의 기울기
+                    sizemode="absolute", sizeref=0.25, # 화살표 두께
+                    colorscale=[[0, 'magenta'], [1, 'magenta']], showscale=False, # 단색 Magenta
+                    anchor="tail",
+                    name=f"기울기 S{arrow_start_idx}" if i == 0 else "", # 최근 기울기만 범례 표시
+                    hoverinfo='skip'
+                ))
     
-    # 최적점 표시
-    min_x, min_y, min_z = min_point
-    fig.add_trace(go.Scatter3d(
-        x=[min_x], y=[min_y], z=[min_z],
-        mode='markers+text',
-        marker=dict(size=10, color='limegreen', symbol='diamond'),
-        text=["최적점"],
-        textposition="bottom center",
-        name="최적점"
-    ))
-    
-    # 현재 위치 표시
-    if gd_path:
-        last_x, last_y = gd_path[-1]
-        try:
-            last_z = f_np(last_x, last_y)
-        except Exception:
-            last_z = last_x**2 + last_y**2
-            
-        current_label = "현재 위치"
-        if converged:
-            current_label = "수렴점"
-            
+    # SciPy로 찾은 최적점 표시
+    if min_point_scipy:
+        min_x_sp, min_y_sp, min_z_sp = min_point_scipy
         fig.add_trace(go.Scatter3d(
-            x=[last_x], y=[last_y], z=[last_z],
+            x=[min_x_sp], y=[min_y_sp], z=[min_z_sp],
             mode='markers+text',
-            marker=dict(
-                size=10, 
-                color='green' if converged else 'blue',
-                symbol='circle'
-            ),
-            text=[current_label],
-            textposition="top right",
-            name=current_label
+            marker=dict(size=10, color='cyan', symbol='diamond'),
+            text=["SciPy 최적점"], textposition="bottom center", name="SciPy 최적점"
         ))
-    
-    # 레이아웃 설정
+
+    # 경사하강법 최종점 표시
+    last_x_gd, last_y_gd = gd_path_plot[-1]
+    try:
+        last_z_gd = f_np(last_x_gd, last_y_gd)
+    except Exception:
+        last_z_gd = np.nan # 계산 불가 시
+
+    fig.add_trace(go.Scatter3d(
+        x=[last_x_gd], y=[last_y_gd], z=[last_z_gd if not np.isnan(last_z_gd) else Zs.min()], # NaN이면 그래프 최소값에 표시
+        mode='markers+text',
+        marker=dict(size=10, color='blue', symbol='x'),
+        text=["GD 최종점"], textposition="top left", name="GD 최종점"
+    ))
+
+
     fig.update_layout(
         scene=dict(
-            xaxis_title='x', 
-            yaxis_title='y', 
-            zaxis_title='f(x, y)',
-            camera=dict(eye=camera_eye),
-            aspectratio=dict(x=1, y=1, z=0.8)
+            xaxis_title='x', yaxis_title='y', zaxis_title='f(x, y)',
+            camera=dict(eye=current_camera_eye),
+            aspectmode='cube' # 비율 고정하여 왜곡 방지
         ),
-        width=800, 
-        height=600, 
-        margin=dict(l=10, r=10, t=30, b=10),
-        title="경사하강법 경로 시각화",
-        legend=dict(
-            yanchor="top",
-            y=0.99,
-            xanchor="left",
-            x=0.01,
-            bgcolor="rgba(255, 255, 255, 0.8)"
-        ),
+        width=None, height=700, margin=dict(l=10, r=10, t=30, b=10),
+        title_text="경사 하강법 경로 및 함수 표면", title_x=0.5,
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
     )
-    
-    # 등고선 바닥에 추가
-    fig.update_layout(
-        scene=dict(
-            xaxis=dict(showbackground=True, backgroundcolor='rgb(230, 230, 230)'),
-            yaxis=dict(showbackground=True, backgroundcolor='rgb(230, 230, 230)'),
-            zaxis=dict(showbackground=True, backgroundcolor='rgb(230, 230, 230)')
-        )
-    )
-    
     return fig
 
-# 컨트롤 버튼
-st.subheader("4️⃣ 경사하강법 실행")
-col_btn1, col_btn2, col_btn3, col_btn4 = st.columns([1, 1, 1, 1])
+# --- 제어 버튼 ---
+st.markdown("---")
+col_btn1, col_btn2, col_btn3 = st.columns([1.5, 2, 1]) # 버튼 크기 조절
 with col_btn1:
-    step_btn = st.button("한 스텝 이동", help="경사하강법을 한 단계 진행합니다.")
+    step_btn = st.button("🚶 한 스텝 이동", use_container_width=True)
 with col_btn2:
-    play_btn = st.button("▶ 전체 실행 (애니메이션)", key="playbtn", help="경사하강법을 애니메이션으로 끝까지 실행합니다.")
+    play_btn = st.button("🎥 전체 실행 (애니메이션)", key="playbtn", use_container_width=True)
 with col_btn3:
-    stop_btn = st.button("⏹ 중지", key="stopbtn", help="실행 중인 애니메이션을 중지합니다.")
-with col_btn4:
-    reset_btn = st.button("🔄 초기화", key="resetbtn", help="모든 상태를 초기 상태로 되돌립니다.")
+    reset_btn = st.button("🔄 초기화", key="resetbtn", use_container_width=True)
 
-# 함수 및 그래디언트 설정
-f_np, dx_np, dy_np, func_error = setup_function(func_input)
+# --- 메인 로직 ---
+graph_placeholder = st.empty() # 그래프를 표시할 영역
+info_cols = st.columns(3) # 정보 표시 컬럼
 
-# 오류 발생 시 처리
-if func_error:
-    st.error(func_error)
-    st.stop()
-
-# 유효한 함수로 진행
 try:
-    # 최적점 찾기
-    min_x, min_y, min_z = find_optimal_point(f_np, x_min, x_max, y_min, y_max)
-    
-    # 리셋 버튼 처리
+    f_sym = sympify(func_input)
+    f_np = lambdify((x, y), f_sym, modules=['numpy', {'cos': np.cos, 'sin': np.sin, 'exp': np.exp, 'sqrt': np.sqrt}]) # numpy 모듈 및 추가 함수 지원
+    dx_f_sym = diff(f_sym, x)
+    dy_f_sym = diff(f_sym, y)
+    dx_np = lambdify((x, y), dx_f_sym, modules=['numpy', {'cos': np.cos, 'sin': np.sin, 'exp': np.exp, 'sqrt': np.sqrt}])
+    dy_np = lambdify((x, y), dy_f_sym, modules=['numpy', {'cos': np.cos, 'sin': np.sin, 'exp': np.exp, 'sqrt': np.sqrt}])
+
+    # SciPy를 사용한 최적점 계산 (참고용)
+    min_point_scipy_coords = None
+    try:
+        def min_func_scipy(vars_list):
+            return f_np(vars_list[0], vars_list[1])
+        
+        # 최적화 시작점을 다양하게 시도 (예: (0,0), 현재 시작점)
+        # 이는 복잡한 함수에서 더 나은 전역 최적점을 찾는데 도움을 줄 수 있음
+        potential_starts = [[0,0], [start_x, start_y]]
+        best_res = None
+        for p_start in potential_starts:
+            res_temp = minimize(min_func_scipy, p_start, method='Nelder-Mead', tol=1e-6)
+            if best_res is None or res_temp.fun < best_res.fun:
+                best_res = res_temp
+        
+        if best_res and best_res.success:
+            min_x_sp, min_y_sp = best_res.x
+            min_z_sp = f_np(min_x_sp, min_y_sp)
+            min_point_scipy_coords = (min_x_sp, min_y_sp, min_z_sp)
+    except Exception as e:
+        st.sidebar.warning(f"SciPy 최적점 계산 중 오류: {e}")
+
+
     if reset_btn:
         st.session_state.gd_path = [(float(start_x), float(start_y))]
         st.session_state.gd_step = 0
         st.session_state.play = False
-        st.session_state.converged = False
-        st.session_state.converged_step = -1
-    
-    # 중지 버튼 처리
-    if stop_btn:
-        st.session_state.play = False
-    
-    # 한 스텝 이동
-    if step_btn and st.session_state.gd_step < steps and not st.session_state.converged:
+        st.session_state.animation_camera_eye = camera_eye # 초기화 시 카메라 각도 업데이트
+        st.session_state.messages = []
+        st.rerun() # 상태 초기화 후 즉시 UI 반영
+
+    # 한 스텝 이동 로직
+    if step_btn and st.session_state.gd_step < steps:
         curr_x, curr_y = st.session_state.gd_path[-1]
-        next_x, next_y, grad_x, grad_y, grad_mag, converged = gradient_descent_step(
-            curr_x, curr_y, dx_np, dy_np, learning_rate,
-            x_min, x_max, y_min, y_max, convergence_threshold
-        )
-        
-        # 수렴 여부 확인 및 저장
-        if converged and not st.session_state.converged:
-            st.session_state.converged = True
-            st.session_state.converged_step = st.session_state.gd_step
-        
-        st.session_state.gd_path.append((next_x, next_y))
-        st.session_state.gd_step += 1
-    
-    # 전체 실행 애니메이션
+        try:
+            grad_x_val = dx_np(curr_x, curr_y)
+            grad_y_val = dy_np(curr_x, curr_y)
+
+            if np.isnan(grad_x_val) or np.isnan(grad_y_val):
+                st.session_state.messages.append(("error", "기울기 계산 결과가 NaN입니다. 발산 가능성이 있습니다."))
+            else:
+                next_x = curr_x - learning_rate * grad_x_val
+                next_y = curr_y - learning_rate * grad_y_val
+                st.session_state.gd_path.append((next_x, next_y))
+                st.session_state.gd_step += 1
+        except Exception as e:
+            st.session_state.messages.append(("error", f"스텝 진행 중 오류: {e}"))
+
+    # 전체 실행 애니메이션 로직
     if play_btn:
         st.session_state.play = True
-    
-    if st.session_state.play and st.session_state.gd_step < steps and not st.session_state.converged:
-        # 애니메이션 실행을 위한 빈 컨테이너
-        fig_placeholder = st.empty()
-        status_placeholder = st.empty()
-        
-        for i in range(st.session_state.gd_step, steps):
-            if not st.session_state.play:  # 중지 버튼 확인
-                break
-                
-            curr_x, curr_y = st.session_state.gd_path[-1]
-            next_x, next_y, grad_x, grad_y, grad_mag, converged = gradient_descent_step(
-                curr_x, curr_y, dx_np, dy_np, learning_rate,
-                x_min, x_max, y_min, y_max, convergence_threshold
-            )
-            
-            # 수렴 여부 확인 및 저장
-            if converged and not st.session_state.converged:
-                st.session_state.converged = True
-                st.session_state.converged_step = st.session_state.gd_step
-                
-            st.session_state.gd_path.append((next_x, next_y))
-            st.session_state.gd_step += 1
-            
-            # 애니메이션 업데이트
-            fig = plot_gd(
-                f_np, dx_np, dy_np, x_min, x_max, y_min, y_max,
-                st.session_state.gd_path, (min_x, min_y, min_z), 
-                camera_eye, st.session_state.converged, st.session_state.converged_step
-            )
-            fig_placeholder.plotly_chart(fig, use_container_width=True, key=f"animation_chart_{i}")
-            
-            # 상태 정보 업데이트
-            last_x, last_y = st.session_state.gd_path[-1]
-            try:
-                last_z = f_np(last_x, last_y)
-                grad_x = dx_np(last_x, last_y)
-                grad_y = dy_np(last_x, last_y)
-                grad_mag = np.sqrt(grad_x**2 + grad_y**2)
-            except Exception:
-                last_z = last_x**2 + last_y**2
-                grad_x = last_x * 2
-                grad_y = last_y * 2
-                grad_mag = np.sqrt(grad_x**2 + grad_y**2)
-            
-            # 상태 메시지 업데이트    
-            status_msg = f"""
-            **스텝 {st.session_state.gd_step}/{steps}** | 
-            **위치:** ({last_x:.3f}, {last_y:.3f}) | 
-            **함수값:** {last_z:.3f} | 
-            **기울기 크기:** {grad_mag:.4f}
-            """
-            if converged:
-                status_placeholder.success(f"{status_msg} ✅ 수렴!")
-                # 수렴 시 애니메이션 중단
+        st.session_state.animation_camera_eye = camera_eye # 애니메이션 시작 시 카메라 각도 고정
+        st.session_state.messages = [] # 애니메이션 시작 시 이전 메시지 클리어
+
+    if st.session_state.play and st.session_state.gd_step < steps:
+        # 애니메이션 루프에서는 고정된 카메라 각도 사용
+        # st.session_state에 animation_camera_eye가 없을 경우 현재 UI 카메라 사용
+        current_animation_cam = st.session_state.get("animation_camera_eye", camera_eye)
+
+        curr_x_anim, curr_y_anim = st.session_state.gd_path[-1]
+        try:
+            grad_x_anim = dx_np(curr_x_anim, curr_y_anim)
+            grad_y_anim = dy_np(curr_x_anim, curr_y_anim)
+
+            if np.isnan(grad_x_anim) or np.isnan(grad_y_anim):
+                st.session_state.messages.append(("error", "애니메이션 중 기울기 NaN. 중단합니다."))
                 st.session_state.play = False
-                break
             else:
-                status_placeholder.info(status_msg)
+                next_x_anim = curr_x_anim - learning_rate * grad_x_anim
+                next_y_anim = curr_y_anim - learning_rate * grad_y_anim
+                st.session_state.gd_path.append((next_x_anim, next_y_anim))
+                st.session_state.gd_step += 1
                 
-            # 애니메이션 속도 조절
-            time.sleep(animation_speed)
+                fig_anim = plot_gd(f_np, dx_np, dy_np, x_min, x_max, y_min, y_max,
+                                   st.session_state.gd_path, min_point_scipy_coords, current_animation_cam)
+                graph_placeholder.plotly_chart(fig_anim, use_container_width=True) # key 제거
+                time.sleep(0.15) # 애니메이션 속도
+                if st.session_state.gd_step < steps: # 마지막 스텝이 아니면 다시 실행
+                     st.rerun() 
+                else: # 마지막 스텝이면 play 상태 해제
+                     st.session_state.play = False
+        except Exception as e:
+            st.session_state.messages.append(("error", f"애니메이션 중 오류: {e}"))
+            st.session_state.play = False
             
-        st.session_state.play = False
-    
-    # 그래프 및 상태 표시
-    fig = plot_gd(
-        f_np, dx_np, dy_np, x_min, x_max, y_min, y_max,
-        st.session_state.gd_path, (min_x, min_y, min_z), 
-        camera_eye, st.session_state.converged, st.session_state.converged_step
-    )
-    st.plotly_chart(fig, use_container_width=True, key="main_chart")
-    
-    # 현재 상태 정보 표시
-    if st.session_state.gd_path:
-        last_x, last_y = st.session_state.gd_path[-1]
-        try:
-            last_z = f_np(last_x, last_y)
-            grad_x = dx_np(last_x, last_y)
-            grad_y = dy_np(last_x, last_y)
-            grad_mag = np.sqrt(grad_x**2 + grad_y**2)
-        except Exception:
-            last_z = last_x**2 + last_y**2
-            grad_x = last_x * 2
-            grad_y = last_y * 2
-            grad_mag = np.sqrt(grad_x**2 + grad_y**2)
-        
-        # 최적점과의 비교
-        try:
-            min_z = f_np(min_x, min_y)
-            distance_to_min = np.sqrt((last_x - min_x)**2 + (last_y - min_y)**2)
-            value_diff = last_z - min_z
-        except Exception:
-            min_z = 0
-            distance_to_min = np.sqrt((last_x - min_x)**2 + (last_y - min_y)**2)
-            value_diff = 0
-            
-        # 상태 표시 - 수렴 여부에 따라 다른 스타일 적용
-        if st.session_state.converged:
-            st.success(
-                f"""
-                ✅ **수렴 완료!** (스텝 {st.session_state.converged_step+1}에서 수렴)
-                
-                **현재 위치:** ({last_x:.4f}, {last_y:.4f})  
-                **현재 함수값:** {last_z:.4f}  
-                **현재 기울기:** (∂f/∂x = {grad_x:.4f}, ∂f/∂y = {grad_y:.4f})  
-                **기울기 크기:** {grad_mag:.6f} < {convergence_threshold} (임계값)
-                
-                **최적점까지 거리:** {distance_to_min:.4f}  
-                **최적값과 차이:** {value_diff:.6f}
-                """
-            )
-        else:
-            if grad_mag < convergence_threshold * 5:
-                st.info(
-                    f"""
-                    **현재 위치:** ({last_x:.4f}, {last_y:.4f})  
-                    **현재 함수값:** {last_z:.4f}  
-                    **현재 기울기:** (∂f/∂x = {grad_x:.4f}, ∂f/∂y = {grad_y:.4f})  
-                    **기울기 크기:** {grad_mag:.6f} (수렴 임계값: {convergence_threshold})
-                    
-                    ℹ️ 기울기가 작아지고 있습니다! 알고리즘이 곧 수렴할 것으로 예상됩니다.
-                    """
-                )
-            else:
-                st.info(
-                    f"""
-                    **현재 위치:** ({last_x:.4f}, {last_y:.4f})  
-                    **현재 함수값:** {last_z:.4f}  
-                    **현재 기울기:** (∂f/∂x = {grad_x:.4f}, ∂f/∂y = {grad_y:.4f})  
-                    **기울기 크기:** {grad_mag:.6f} (수렴 임계값: {convergence_threshold})
-                    
-                    **최적점까지 거리:** {distance_to_min:.4f}
-                    """
-                )
-        
-        # 성능 평가 섹션
-        if st.session_state.gd_step > 0:
-            st.subheader("5️⃣ 경사하강법 평가")
-            
-            col_eval1, col_eval2 = st.columns(2)
-            
-            with col_eval1:
-                # 초기값과 현재값의 차이
-                initial_x, initial_y = st.session_state.gd_path[0]
-                try:
-                    initial_z = f_np(initial_x, initial_y)
-                    improvement = initial_z - last_z
-                    improvement_percent = (improvement / abs(initial_z) * 100) if initial_z != 0 else 0
-                except Exception:
-                    initial_z = initial_x**2 + initial_y**2
-                    improvement = initial_z - last_z
-                    improvement_percent = (improvement / abs(initial_z) * 100) if initial_z != 0 else 0
-                
-                st.metric(
-                    "함수값 개선", 
-                    f"{last_z:.4f}", 
-                    f"{improvement:.4f} ({improvement_percent:.1f}%)",
-                    delta_color="inverse"
-                )
-                
-                # 수렴 속도 측정
-                if st.session_state.converged:
-                    convergence_speed = f"{st.session_state.converged_step+1}스텝만에 수렴"
-                    st.metric("수렴 속도", convergence_speed)
-                else:
-                    remaining_steps = "아직 수렴하지 않음"
-                    st.metric("수렴 상태", remaining_steps)
-            
-            with col_eval2:
-                # 최적점과의 비교
-                try:
-                    opt_z = f_np(min_x, min_y)
-                    opt_diff = last_z - opt_z
-                    opt_percent = (opt_diff / abs(opt_z) * 100) if opt_z != 0 else 0
-                except Exception:
-                    opt_z = 0
-                    opt_diff = last_z
-                    opt_percent = 100
-                
-                st.metric(
-                    "최적값과의 차이", 
-                    f"{last_z:.4f} vs {opt_z:.4f}", 
-                    f"{opt_diff:.4f} ({opt_percent:.1f}%)",
-                    delta_color="inverse"
-                )
-                
-                # 그래디언트 크기
-                grad_threshold_ratio = grad_mag / convergence_threshold
-                grad_status = "수렴" if grad_threshold_ratio < 1 else f"임계값의 {grad_threshold_ratio:.1f}배"
-                
-                st.metric(
-                    "기울기 크기", 
-                    f"{grad_mag:.6f}", 
-                    grad_status,
-                    delta_color="inverse" if grad_threshold_ratio >= 1 else "normal"
-                )
+    else: # 애니메이션 중이 아닐 때 (일반 업데이트 또는 애니메이션 종료 후)
+        current_display_cam = camera_eye # 일반 표시는 현재 UI 카메라 설정 따름
+        if st.session_state.get("play_just_finished", False): # 애니메이션이 방금 끝났다면
+            current_display_cam = st.session_state.get("animation_camera_eye", camera_eye) # 애니메이션 마지막 카메라 유지
+            st.session_state.play_just_finished = False
 
-            # 학습 포인트 표시
-            st.subheader("💡 학습 포인트")
-            
-            # 함수 유형별 메시지
-            learning_messages = {
-                "볼록 함수 (최적화 쉬움, 예: x²+y²)": 
-                    "볼록 함수는 하나의 전역 최소값만 가지므로 경사하강법이 항상 최적해로 수렴합니다. 학습률 조정을 통해 수렴 속도를 제어할 수 있습니다.",
-                "안장점 함수 (최적화 어려움, 예: x²-y²)": 
-                    "안장점 함수는 (0,0)에서 한 방향으로는 증가하고 다른 방향으로는 감소합니다. 시작점에 따라 경로가 크게 달라지며, 실제 딥러닝에서 이런 지형은 학습을 어렵게 만듭니다.",
-                "로젠브록 함수 (바나나 함수, 최적화 어려움)": 
-                    "로젠브록 함수는 좁은 계곡 형태로, 일반적인 경사하강법이 최적화하기 어려운 지형입니다. 학습률이 너무 크면 발산하고, 너무 작으면 수렴이 매우 느립니다. 이는 실제 딥러닝에서 발생하는 어려운 최적화 문제와 유사합니다.",
-                "사인 함수 (여러 지역 최소값)": 
-                    "사인 함수는 여러 개의 지역 최소값을 가지고 있어 시작점에 따라 다른 최소값으로 수렴합니다. 딥러닝에서도 이러한 여러 지역 최소값 문제가 발생하며, 이를 해결하기 위해 모멘텀이나 학습률 조정과 같은 기법이 사용됩니다."
-            }
-            
-            if func_radio in learning_messages:
-                st.info(learning_messages[func_radio])
-            else:
-                st.info("사용자 정의 함수를 탐색해보세요. 함수의 특성에 따라 경사하강법의 성능이 크게 달라질 수 있습니다.")
-            
-            # 경사하강법 성능 분석
-            if st.session_state.converged:
-                if st.session_state.converged_step < 5:
-                    st.success("🚀 **빠른 수렴**: 경사하강법이 매우 효율적으로 최적점에 도달했습니다. 이는 함수가 최적화하기 쉬운 형태이거나 학습률이 적절하게 설정되었음을 의미합니다.")
-                elif distance_to_min < 0.1 and opt_diff < 0.1:
-                    st.success("✅ **성공적인 최적화**: 경사하강법이 최적점에 매우 가깝게 수렴했습니다.")
-                else:
-                    st.warning("⚠️ **부분적 수렴**: 알고리즘이 수렴했지만 전역 최적점에 도달하지 못했을 수 있습니다. 다른 시작점이나 학습률을 시도해보세요.")
-            elif st.session_state.gd_step >= steps:
-                if grad_mag < convergence_threshold * 2:
-                    st.warning("⚠️ **느린 수렴**: 기울기가 작아지고 있지만 최대 반복 횟수에 도달했습니다. 더 많은 스텝을 실행하거나 수렴 임계값을 높이세요.")
-                else:
-                    st.error("❌ **수렴 실패**: 최대 반복 횟수에 도달했지만 알고리즘이 수렴하지 않았습니다. 학습률을 조정하거나 다른 시작점을 시도해보세요.")
-            elif grad_mag > 100:
-                st.error("❌ **발산 가능성**: 그래디언트 크기가 매우 큽니다. 학습률이 너무 크거나 함수가 불안정한 영역에 있을 수 있습니다.")
-            else:
-                st.info("🔄 **최적화 진행 중**: 계속해서 '한 스텝 이동' 또는 '전체 실행' 버튼을 눌러 경사하강법을 진행하세요.")
+        fig_static = plot_gd(f_np, dx_np, dy_np, x_min, x_max, y_min, y_max,
+                             st.session_state.gd_path, min_point_scipy_coords, current_display_cam)
+        graph_placeholder.plotly_chart(fig_static, use_container_width=True, key="main_chart_static")
 
+
+    # --- 현재 상태 정보 표시 ---
+    last_x_info, last_y_info = st.session_state.gd_path[-1]
+    try:
+        last_z_info = f_np(last_x_info, last_y_info)
+        current_grad_x = dx_np(last_x_info, last_y_info)
+        current_grad_y = dy_np(last_x_info, last_y_info)
+        grad_norm = np.sqrt(current_grad_x**2 + current_grad_y**2)
+    except Exception: # 계산 오류 시 (예: func_input이 비어있거나 잘못된 초기 상태)
+        last_z_info = np.nan
+        current_grad_x = np.nan
+        current_grad_y = np.nan
+        grad_norm = np.nan
+
+
+    prev_z_info = np.nan
+    if len(st.session_state.gd_path) > 1:
+        prev_x_path, prev_y_path = st.session_state.gd_path[-2]
+        try:
+            prev_z_info = f_np(prev_x_path, prev_y_path)
+        except Exception:
+            prev_z_info = np.nan
+
+    delta_val = last_z_info - prev_z_info if not (np.isnan(last_z_info) or np.isnan(prev_z_info)) else np.nan
+
+    with info_cols[0]:
+        st.metric(label="현재 스텝", value=f"{st.session_state.gd_step} / {steps}")
+        st.markdown(f"**위치 (x, y)**: `({last_x_info:.3f}, {last_y_info:.3f})`")
+    with info_cols[1]:
+        st.metric(label="현재 함수 값 f(x,y)", value=f"{last_z_info:.4f}" if not np.isnan(last_z_info) else "N/A",
+                  delta=f"{delta_val:.4f}" if not np.isnan(delta_val) else None,
+                  delta_color="inverse" if not np.isnan(delta_val) and delta_val < 0 else ("normal" if not np.isnan(delta_val) and delta_val > 0 else "off"))
+    with info_cols[2]:
+        st.metric(label="기울기 크기 ||∇f||", value=f"{grad_norm:.4f}" if not np.isnan(grad_norm) else "N/A")
+        st.markdown(f"**∂f/∂x**: `{current_grad_x:.3f}`\n**∂f/∂y**: `{current_grad_y:.3f}`")
+
+    # 메시지 출력
+    for msg_type, msg_content in st.session_state.get("messages", []):
+        if msg_type == "error":
+            st.error(msg_content)
+        elif msg_type == "warning":
+            st.warning(msg_content)
+        elif msg_type == "success":
+            st.success(msg_content)
+    st.session_state.messages = [] # 메시지 표시 후 초기화
+
+    # 최종 상태 판단 메시지 (애니메이션 중이 아닐 때만)
+    if not st.session_state.play:
+        if np.isnan(last_z_info) or np.isinf(last_z_info):
+            st.error("🚨 함수 값이 발산했습니다! (NaN 또는 무한대) 학습률을 줄이거나 시작점, 함수를 변경해보세요.")
+        elif st.session_state.gd_step >= steps and grad_norm > 1e-2: # 임계값은 조절 가능
+            st.warning(f"⚠️ 최대 반복 횟수({steps})에 도달했지만, 기울기 크기({grad_norm:.4f})가 아직 충분히 작지 않습니다. 최적점에 더 가까워지려면 반복 횟수를 늘리거나 학습률/함수를 조절해보세요.")
+        elif grad_norm < 1e-2 and not (np.isnan(grad_norm) or np.isinf(grad_norm)):
+            st.success(f"🎉 기울기 크기({grad_norm:.4f})가 매우 작아져 최적점 또는 안장점에 근접한 것으로 보입니다!")
+        
+except SyntaxError:
+    st.error(f"🚨 함수 수식에 문법 오류가 있습니다: '{func_input}'. Python 수학 표현식을 확인해주세요 (예: x**2 + sin(y)).")
 except Exception as e:
-    st.error(f"오류가 발생했습니다: {str(e)}")
-    st.info("함수나 파라미터를 변경하고 다시 시도해보세요. 특히 사용자 정의 함수를 입력한 경우 구문이 올바른지 확인하세요.")
+    st.error(f"🚨 처리 중 오류 발생: {e}. 함수 수식이나 입력값을 확인해주세요.")
 
-# 설명 섹션
-with st.expander("경사하강법 알고리즘 설명"):
-    st.markdown("""
-    ### 경사하강법 알고리즘
-
-    경사하강법은 다음과 같은 간단한 알고리즘으로 구현됩니다:
-
-    1. 초기 위치 $(x_0, y_0)$를 선택합니다.
-    2. $t = 0, 1, 2, ...$에 대해 다음을 반복합니다:
-       * 현재 위치 $(x_t, y_t)$에서 함수의 그래디언트 $\\nabla f(x_t, y_t) = (\\frac{\\partial f}{\\partial x}, \\frac{\\partial f}{\\partial y})$를 계산합니다.
-       * 그래디언트 방향의 반대 방향으로 이동: $(x_{t+1}, y_{t+1}) = (x_t, y_t) - \\eta \\nabla f(x_t, y_t)$ 
-       * 여기서 $\\eta$는 학습률(learning rate)입니다.
-    3. 그래디언트의 크기 $\\|\\nabla f(x_t, y_t)\\|$가 충분히 작아지거나 최대 반복 횟수에 도달하면 종료합니다.
-
-    ### 학습률의 영향
-    * 학습률이 크면: 빠르게 이동하지만 최적점을 지나치거나 발산할 위험이 있습니다.
-    * 학습률이 작으면: 안정적이지만 수렴이 느립니다.
-
-    ### 딥러닝에서의 응용
-    신경망 학습에서 경사하강법은 손실 함수(loss function)를 최소화하는 모델 파라미터를 찾는 데 사용됩니다.
-    이 데모에서 x, y 좌표는 실제 딥러닝에서는 수백만 개의 모델 파라미터에 해당합니다.
+# --- SciPy 최적점 정보 사이드바 표시 ---
+if min_point_scipy_coords:
+    st.sidebar.subheader("🔬 SciPy 최적화 결과 (참고용)")
+    st.sidebar.markdown(f"""
+    `scipy.optimize.minimize` (Nelder-Mead)를 사용해 찾은 (지역) 최적점 후보:
+    - **위치 (x, y)**: `({min_point_scipy_coords[0]:.3f}, {min_point_scipy_coords[1]:.3f})`
+    - **함수 값 f(x,y)**: `{min_point_scipy_coords[2]:.4f}`
+    ---
+    *경사 하강법의 목표는 이와 같은 최적점에 도달하는 것입니다. SciPy는 다른 최적화 기법을 사용하며, 찾은 점이 전역 최적점이 아닐 수도 있습니다.*
     """)
-
-# 추가 정보 및 저작권
-st.caption("제작: 서울고 송석리 선생님 | 교육적 개선 버전")
+else:
+    st.sidebar.info("SciPy 최적점 정보를 계산할 수 없었습니다 (선택된 함수에 따라 다름).")
