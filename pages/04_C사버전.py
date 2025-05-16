@@ -954,7 +954,7 @@ def main():
                 st.error("🚨 함수 값이 발산했습니다! (NaN 또는 무한대)")
             elif st.session_state.gd_step >= st.session_state.steps_slider and grad_norm_final > 5e-2:
                 st.warning(f"⚠️ 최대 반복({st.session_state.steps_slider}) 도달, 기울기({grad_norm_final:.4f})가 아직 충분히 작지 않음.")
-            elif grad_norm_final < 1e-2 and not (np.isnan(grad_norm_final) or np.isinf(grad_norm_final)):
+            elif grad_norm_final < 5e-2 and not (np.isnan(grad_norm_final) or np.isinf(grad_norm_final)):
                 st.success(f"🎉 기울기({grad_norm_final:.4f})가 매우 작아 최적점 또는 안장점에 근접했습니다!")
         except Exception:
             pass
