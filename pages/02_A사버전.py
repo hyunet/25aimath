@@ -34,6 +34,13 @@ with st.expander("👇사용 방법 자세히 보기"):
 5. 메인 **3D 그래프**와 **함숫값 변화 그래프**를 함께 관찰
 """)
 
+col_btn1, col_btn2, col_btn3, col_info_main = st.columns([1.2, 1.8, 1, 2.5]) 
+with col_btn1: step_btn = st.button("🚶 한 스텝 이동", use_container_width=True, disabled=st.session_state.is_calculating_all_steps or parse_error or not callable(f_np))
+with col_btn2: run_all_btn = st.button("🚀 전체 경로 계산", key="run_all_btn_widget_key", use_container_width=True, disabled=st.session_state.is_calculating_all_steps or parse_error or not callable(f_np))
+with col_btn3: reset_btn = st.button("🔄 초기화", key="resetbtn_widget_key", use_container_width=True, disabled=st.session_state.is_calculating_all_steps or parse_error or not callable(f_np))
+
+step_info_placeholder = col_info_main.empty()
+
 
 angle_options = {
     "사선(전체 보기)": dict(x=1.7, y=1.7, z=1.2),
@@ -648,13 +655,6 @@ if parse_error and not (callable(f_np) and callable(dx_np) and callable(dy_np)):
     graph_placeholder_2d.plotly_chart(fig2d_dummy, use_container_width=True)
     step_info_placeholder.markdown(info_md_dummy, unsafe_allow_html=True)
     st.stop()
-
-col_btn1, col_btn2, col_btn3, col_info_main = st.columns([1.2, 1.8, 1, 2.5]) 
-with col_btn1: step_btn = st.button("🚶 한 스텝 이동", use_container_width=True, disabled=st.session_state.is_calculating_all_steps or parse_error or not callable(f_np))
-with col_btn2: run_all_btn = st.button("🚀 전체 경로 계산", key="run_all_btn_widget_key", use_container_width=True, disabled=st.session_state.is_calculating_all_steps or parse_error or not callable(f_np))
-with col_btn3: reset_btn = st.button("🔄 초기화", key="resetbtn_widget_key", use_container_width=True, disabled=st.session_state.is_calculating_all_steps or parse_error or not callable(f_np))
-
-step_info_placeholder = col_info_main.empty()
 
 def perform_one_step():
     if "gd_path" not in st.session_state or not st.session_state.gd_path:
