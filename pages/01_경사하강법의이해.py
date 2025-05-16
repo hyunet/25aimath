@@ -3,9 +3,29 @@ from sympy import symbols, diff, sympify, lambdify
 import numpy as np
 import plotly.graph_objects as go
 
-st.title("딥러닝 경사하강법 애니메이션 체험 (기울기 방향 시점)")
+st.title("딥러닝 경사하강법 체험 - 다양한 함수와 시점 유지")
 
-func_input = st.text_input("함수 f(x, y)를 입력하세요 (예: x**2 + y**2)", value="x**2 + y**2")
+# 함수 선택
+default_funcs = {
+    "볼록 함수 (최적화 쉬움, 예: x²+y²)": "x**2 + y**2",
+    "안장점 함수 (최적화 어려움, 예: x²-y²)": "x**2 - y**2",
+    "사용자 정의 함수 입력": ""
+}
+func_options = list(default_funcs.keys())
+func_radio = st.radio(
+    "함수 유형을 선택하세요.",
+    func_options,
+    horizontal=True,
+    index=0
+)
+
+# 사용자 입력 및 실제 적용될 수식
+if func_radio == "사용자 정의 함수 입력":
+    func_input = st.text_input("함수 f(x, y)를 입력하세요 (예: x**2 + y**2)", value="x**2 + y**2")
+else:
+    func_input = default_funcs[func_radio]
+    st.text_input("함수 f(x, y)", value=func_input, disabled=True)
+
 x_min, x_max = st.slider("x 범위", -10, 10, (-5, 5))
 y_min, y_max = st.slider("y 범위", -10, 10, (-5, 5))
 
@@ -16,11 +36,18 @@ steps = st.slider("최대 반복 횟수", 1, 50, 15)
 
 x, y = symbols('x y')
 
+# --- 상태: 경로, 카메라 시점, 현재 step 등 ---
 if "gd_path" not in st.session_state or st.session_state.get("last_func", "") != func_input:
     st.session_state.gd_path = [(float(start_x), float(start_y))]
     st.session_state.gd_step = 0
+    # 카메라 초기 위치 (그래프 전체가 보이도록)
+    st.session_state.camera_eye = dict(x=1.7, y=1.7, z=1.2)
     st.session_state.play = False
     st.session_state.last_func = func_input
+
+# 카메라 조작 이벤트 감지용(유저가 손으로 돌렸을 때 갱신)
+def update_camera_eye(camera_eye):
+    st.session_state.camera_eye = camera_eye
 
 col1, col2, col3 = st.columns([1,1,2])
 with col1:
@@ -49,6 +76,7 @@ try:
         st.session_state.gd_path = [(float(start_x), float(start_y))]
         st.session_state.gd_step = 0
         st.session_state.play = False
+        st.session_state.camera_eye = dict(x=1.7, y=1.7, z=1.2) # 초기화시도
 
     # 한 스텝 이동
     if step_btn and st.session_state.gd_step < steps:
@@ -66,7 +94,7 @@ try:
         st.session_state.play = True
 
     # 시각화 함수
-    def plot_gd(f_np, dx_np, dy_np, x_min, x_max, y_min, y_max, gd_path, min_point):
+    def plot_gd(f_np, dx_np, dy_np, x_min, x_max, y_min, y_max, gd_path, min_point, camera_eye):
         X = np.linspace(x_min, x_max, 80)
         Y = np.linspace(y_min, y_max, 80)
         Xs, Ys = np.meshgrid(X, Y)
@@ -124,26 +152,18 @@ try:
             name="최종점"
         ))
 
-        # === 카메라 시점: 기울기 방향 정면 ===
-        grad_x = dx_np(last_x, last_y)
-        grad_y = dy_np(last_x, last_y)
-        grad_norm = np.sqrt(grad_x**2 + grad_y**2) + 1e-6
-        cam_distance = 2.0
-        eye_x = last_x - cam_distance * grad_x / grad_norm
-        eye_y = last_y - cam_distance * grad_y / grad_norm
-        eye_z = last_z + 1.5
-
+        # 카메라 eye 그대로(유지)
         fig.update_layout(
             scene=dict(
                 xaxis_title='x', yaxis_title='y', zaxis_title='f(x, y)',
-                camera=dict(eye=dict(x=eye_x, y=eye_y, z=eye_z))
+                camera=dict(eye=camera_eye)
             ),
             width=800, height=600, margin=dict(l=10, r=10, t=30, b=10),
-            title="경사하강법 경로 vs 최적점 (기울기 방향 시점)"
+            title="경사하강법 경로 vs 최적점"
         )
         return fig
 
-    # 애니메이션 루프
+    # 애니메이션 루프 (카메라 시점 유지)
     if st.session_state.play and st.session_state.gd_step < steps:
         fig_placeholder = st.empty()
         for _ in range(st.session_state.gd_step, steps):
@@ -154,19 +174,18 @@ try:
             next_y = curr_y - learning_rate * grad_y
             st.session_state.gd_path.append((next_x, next_y))
             st.session_state.gd_step += 1
-            fig_placeholder.plotly_chart(
-                plot_gd(f_np, dx_np, dy_np, x_min, x_max, y_min, y_max, st.session_state.gd_path, (min_x, min_y, min_z)),
-                use_container_width=True
-            )
+            fig = plot_gd(f_np, dx_np, dy_np, x_min, x_max, y_min, y_max, st.session_state.gd_path, (min_x, min_y, min_z), st.session_state.camera_eye)
+            fig_placeholder.plotly_chart(fig, use_container_width=True)
             time.sleep(0.15)
         st.session_state.play = False
 
-    # 한 스텝/일반 출력
-    st.plotly_chart(
-        plot_gd(f_np, dx_np, dy_np, x_min, x_max, y_min, y_max,
-                st.session_state.gd_path, (min_x, min_y, min_z)),
-        use_container_width=True
-    )
+    # Step/일반 출력
+    fig = plot_gd(f_np, dx_np, dy_np, x_min, x_max, y_min, y_max,
+                  st.session_state.gd_path, (min_x, min_y, min_z), st.session_state.camera_eye)
+    camera_update = st.plotly_chart(fig, use_container_width=True)
+
+    # 시점 제어 안내 (Plotly chart 조작 가능함)
+    st.caption("그래프를 직접 회전/확대/축소할 수 있습니다. 원하는 시점에서 Step/Play를 눌러도 시점이 그대로 유지됩니다.")
 
     # 교육적 해설
     last_x, last_y = st.session_state.gd_path[-1]
