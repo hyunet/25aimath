@@ -54,31 +54,31 @@ default_funcs_info = {
     "볼록 함수 (최적화 쉬움, 예: x²+y²)": {
         "func": "x**2 + y**2",
         "desc": "가장 기본적인 형태로, 하나의 전역 최저점을 가집니다.",
-        "preset": {"x_range": (-6, 6), "y_range": (-6, 6),
+        "preset": {"x_range": (-6.0, 6.0), "y_range": (-6.0, 6.0),
                    "start_x": 5.0, "start_y": -4.0, "lr": 0.1, "steps": 25, "camera": "정면(x+방향)"}
     },
     "안장점 함수 (예: 0.3x²-0.3y²)": {
         "func": "0.3*x**2 - 0.3*y**2",
         "desc": "안장점(Saddle Point)을 가집니다.",
-        "preset": {"x_range": (-4, 4), "y_range": (-4, 4),
+        "preset": {"x_range": (-4.0, 4.0), "y_range": (-4.0, 4.0),
                    "start_x": 4.0, "start_y": 0.0, "lr": 0.1, "steps": 40, "camera": "정면(y+방향)"}
     },
     "Himmelblau 함수 (다중 최적점)": {
         "func": "(x**2 + y - 11)**2 + (x + y**2 - 7)**2",
         "desc": "여러 개의 지역 최저점을 가집니다.",
-        "preset": {"x_range": (-6, 6), "y_range": (-6, 6),
+        "preset": {"x_range": (-6.0, 6.0), "y_range": (-6.0, 6.0),
                    "start_x": 1.0, "start_y": 1.0, "lr": 0.01, "steps": 60, "camera": "사선(전체 보기)"}
     },
     "복잡한 함수 (Rastrigin 유사)": {
         "func": "20 + (x**2 - 10*np.cos(2*np.pi*x)) + (y**2 - 10*np.cos(2*np.pi*y))",
         "desc": "매우 많은 지역 최저점을 가지는 비볼록 함수입니다.",
-        "preset": {"x_range": (-5, 5), "y_range": (-5, 5),
+        "preset": {"x_range": (-5.0, 5.0), "y_range": (-5.0, 5.0),
                    "start_x": 3.5, "start_y": -2.5, "lr": 0.02, "steps": 70, "camera": "사선(전체 보기)"}
     },
     "사용자 정의 함수 입력": {
         "func": "",
         "desc": "파이썬 수식으로 직접 입력하세요.",
-        "preset": {"x_range": (-6, 6), "y_range": (-6, 6),
+        "preset": {"x_range": (-6.0, 6.0), "y_range": (-6.0, 6.0),
                    "start_x": 5.0, "start_y": -4.0, "lr": 0.1, "steps": 25, "camera": "정면(x+방향)"}
     }
 }
