@@ -145,7 +145,7 @@ def plot_gd(f_np, dx_np, dy_np, x_min_plot, x_max_plot, y_min_plot, y_max_plot, 
     fig.add_trace(go.Scatter3d(
         x=px, y=py, z=pz,
         mode='lines+markers+text',
-        marker=dict(size=5, color='red', symbol='o'),
+        marker=dict(size=5, color='red', symbol='circle'),
         line=dict(color='red', width=3),
         name="경사 하강 경로",
         text=path_texts,
