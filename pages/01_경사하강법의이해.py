@@ -53,8 +53,8 @@ def apply_preset_for_func_type(func_type_name):
     if func_type_name == "안장점 함수 (예: 0.3x²-0.3y²)":
         st.session_state.x_min_max_slider = (-4.0, 4.0) 
         st.session_state.y_min_max_slider = (-4.0, 4.0) 
-        st.session_state.start_x_slider = 2.0 
-        st.session_state.start_y_slider = 1.0 
+        st.session_state.start_x_slider = 4.0 
+        st.session_state.start_y_slider = 0.0 
         st.session_state.selected_camera_option_name = "정면(y+방향)" 
         st.session_state.steps_slider = 40 
         st.session_state.learning_rate_input = 0.1 
