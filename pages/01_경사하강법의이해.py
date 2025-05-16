@@ -3,8 +3,26 @@ from sympy import symbols, diff, sympify, lambdify
 import numpy as np
 import plotly.graph_objects as go
 
-st.title("딥러닝 경사하강법 체험 - 다양한 함수와 시점 저장")
+st.title("딥러닝 경사하강법 체험 - 다양한 함수와 시점 선택")
 
+# 카메라 각도 라디오 버튼
+angle_options = {
+    "사선(전체 보기)": dict(x=1.7, y=1.7, z=1.2),
+    "정면(x+방향)": dict(x=2.0, y=0.0, z=0.5),
+    "정면(y+방향)": dict(x=0.0, y=2.0, z=0.5),
+    "위에서 내려다보기": dict(x=0.0, y=0.0, z=3.0),
+    "뒤쪽(x-방향)": dict(x=-2.0, y=0.0, z=0.5),
+    "옆(y-방향)": dict(x=0.0, y=-2.0, z=0.5)
+}
+angle_radio = st.radio(
+    "그래프 시점(카메라 각도) 선택",
+    list(angle_options.keys()),
+    index=0,
+    horizontal=True
+)
+camera_eye = angle_options[angle_radio]
+
+# 함수 선택
 default_funcs = {
     "볼록 함수 (최적화 쉬움, 예: x²+y²)": "x**2 + y**2",
     "안장점 함수 (최적화 어려움, 예: x²-y²)": "x**2 - y**2",
@@ -38,7 +56,6 @@ x, y = symbols('x y')
 if "gd_path" not in st.session_state or st.session_state.get("last_func", "") != func_input:
     st.session_state.gd_path = [(float(start_x), float(start_y))]
     st.session_state.gd_step = 0
-    st.session_state.camera_eye = dict(x=1.7, y=1.7, z=1.2)  # 전체가 보이는 각도
     st.session_state.play = False
     st.session_state.last_func = func_input
 
@@ -100,7 +117,7 @@ def plot_gd(f_np, dx_np, dy_np, x_min, x_max, y_min, y_max, gd_path, min_point, 
         name="최종점"
     ))
 
-    # 카메라 eye 유지
+    # 카메라 eye = 항상 사용자가 고른 값!
     fig.update_layout(
         scene=dict(
             xaxis_title='x', yaxis_title='y', zaxis_title='f(x, y)',
@@ -111,15 +128,13 @@ def plot_gd(f_np, dx_np, dy_np, x_min, x_max, y_min, y_max, gd_path, min_point, 
     )
     return fig
 
-col1, col2, col3, col4 = st.columns([1,1,2,2])
+col1, col2, col3 = st.columns([1,1,2])
 with col1:
     step_btn = st.button("한 스텝 이동")
 with col2:
     play_btn = st.button("▶ 전체 실행 (애니메이션)", key="playbtn")
 with col3:
     reset_btn = st.button("🔄 초기화", key="resetbtn")
-with col4:
-    save_cam_btn = st.button("🖼️ 현재 시점 저장(유지)", key="savecam")
 
 try:
     f = sympify(func_input)
@@ -140,7 +155,6 @@ try:
         st.session_state.gd_path = [(float(start_x), float(start_y))]
         st.session_state.gd_step = 0
         st.session_state.play = False
-        st.session_state.camera_eye = dict(x=1.7, y=1.7, z=1.2)
 
     # 한 스텝 이동
     if step_btn and st.session_state.gd_step < steps:
@@ -152,7 +166,7 @@ try:
         st.session_state.gd_path.append((next_x, next_y))
         st.session_state.gd_step += 1
 
-    # 전체 실행 애니메이션 (animation_chart key만 사용!)
+    # 전체 실행 애니메이션 (항상 camera_eye 고정)
     import time
     if play_btn:
         st.session_state.play = True
@@ -169,24 +183,16 @@ try:
             st.session_state.gd_step += 1
             fig = plot_gd(
                 f_np, dx_np, dy_np, x_min, x_max, y_min, y_max,
-                st.session_state.gd_path, (min_x, min_y, min_z), st.session_state.camera_eye)
+                st.session_state.gd_path, (min_x, min_y, min_z), camera_eye)
             fig_placeholder.plotly_chart(fig, use_container_width=True, key="animation_chart")
             time.sleep(0.14)
         st.session_state.play = False
 
-    # Step/일반 출력 (main_chart key만 사용!)
+    # Step/일반 출력 (항상 camera_eye 고정)
     fig = plot_gd(
         f_np, dx_np, dy_np, x_min, x_max, y_min, y_max,
-        st.session_state.gd_path, (min_x, min_y, min_z), st.session_state.camera_eye)
+        st.session_state.gd_path, (min_x, min_y, min_z), camera_eye)
     st.plotly_chart(fig, use_container_width=True, key="main_chart")
-
-    # 시점 저장 버튼: 현재 시각화의 카메라 값을 반영
-    if save_cam_btn:
-        # 사용자가 시점 저장 버튼을 누르면 현재 figure의 카메라 각도를 session_state에 저장
-        cam = fig.layout.scene.camera
-        if cam is not None and hasattr(cam, "eye"):
-            st.session_state.camera_eye = dict(x=cam.eye.x, y=cam.eye.y, z=cam.eye.z)
-            st.success("현재 그래프 시점을 저장했습니다! 이후 Step/Play/Reset에도 계속 유지됩니다.")
 
     last_x, last_y = st.session_state.gd_path[-1]
     last_z = f_np(last_x, last_y)
