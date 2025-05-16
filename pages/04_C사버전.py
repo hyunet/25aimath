@@ -346,7 +346,8 @@ def plot_gd(f_np_func, dx_np_func, dy_np_func, x_range, y_range, gd_path,
                         showscale=False, 
                         anchor="tail", 
                         name=f"기울기 S{arrow_start_idx}" if i == 0 else "", 
-                        hoverinfo='skip'
+                        hoverinfo='skip',
+                        opacity = 0.3
                     ))
                     
                     # 교육 모드에서는 추가 정보 표시
