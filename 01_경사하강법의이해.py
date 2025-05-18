@@ -8,7 +8,7 @@ import time
 st.set_page_config(layout="wide", page_title="경사 하강법 체험")
 
 st.title("🎢 딥러닝 경사하강법 체험")
-st.caption("제작: 서울고 송석리 선생님 | 개선: Gemini AI")
+st.caption("제작: 용인삼계고 김지현 선생님 | 개선: Gemini AI")
 
 # --- 0. 정적 옵션 정의 ---
 angle_options = {
