@@ -99,4 +99,3 @@ try:
 except Exception as e:
     st.error(f"수식 오류: {e}")
 
-st.caption("제작: 서울고 송석리 선생님")
